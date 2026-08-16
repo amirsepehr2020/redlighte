@@ -44,10 +44,17 @@ async function handleChat(request, env) {
       headers: {
         Authorization: `Bearer ${env.OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json',
+        Accept: 'application/json',
         'HTTP-Referer': SITE_URL,
         'X-Title': SITE_NAME,
+        'User-Agent': 'Redlighte/1.0 (https://redlighte.ir)',
       },
-      body: JSON.stringify({ model: MODEL, messages, temperature: 0.7, max_tokens: 1200 }),
+      body: JSON.stringify({
+        model: MODEL,
+        messages,
+        temperature: 0.7,
+        max_tokens: 1200,
+      }),
     });
   } catch (error) {
     return json({ error: 'Could not reach the AI provider.', code: 'UPSTREAM_NETWORK_ERROR', detail: error?.message || 'fetch failed' }, 502, cors);
@@ -58,7 +65,7 @@ async function handleChat(request, env) {
   try { result = JSON.parse(raw); } catch {}
 
   if (!upstream.ok) {
-    const detail = result?.error?.message || result?.error?.code || raw.slice(0, 500) || 'Unknown upstream error.';
+    const detail = result?.error?.message || result?.error?.code || result?.error || raw.slice(0, 500) || 'Unknown upstream error.';
     const code = result?.error?.code || `HTTP_${upstream.status}`;
     const status = upstream.status === 429 ? 429 : upstream.status === 401 ? 502 : upstream.status === 402 ? 502 : 502;
     return json({ error: 'Upstream AI service error.', upstream_status: upstream.status, upstream_code: code, detail }, status, cors);

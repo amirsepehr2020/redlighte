@@ -1,0 +1,12 @@
+{
+  "name": "Redlighte AI",
+  "short_name": "Redlighte",
+  "description": "A focused AI assistant for asking, thinking and creating.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#080808",
+  "theme_color": "#080808",
+  "icons": [
+    { "src": "/assets/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

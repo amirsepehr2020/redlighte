@@ -1,5 +1,5 @@
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const MODEL = 'openrouter/free';
+const MODEL = 'dots-studio/dots-3-note-preview:free';
 const MAX_MESSAGE_LENGTH = 12000;
 const MAX_MESSAGES = 20;
 const SITE_URL = 'https://redlighte.ir';

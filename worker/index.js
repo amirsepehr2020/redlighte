@@ -105,23 +105,27 @@ async function handleChat(request, env) {
       top_p: 0.9,
     });
 
-    console.log(`[${requestId}] Workers AI response received.`);
-
     const answer = result?.response || result?.result?.response;
     if (typeof answer !== 'string' || !answer.trim()) {
-      console.error(`[${requestId}] Workers AI returned an empty/invalid response:`, JSON.stringify(result));
+      console.error(`[${requestId}] Workers AI returned an empty/invalid response. result_keys=${result && typeof result === 'object' ? Object.keys(result).join(',') : 'none'}`);
       return json({
         error: 'The AI service returned an empty response.',
         code: 'EMPTY_AI_RESPONSE',
         request_id: requestId,
-        upstream: result ?? null,
       }, 502, cors);
     }
 
+    console.log(`[${requestId}] Workers AI request completed successfully.`);
     return json({ message: answer, model: MODEL, request_id: requestId }, 200, cors);
   } catch (error) {
-    const detail = error?.message || String(error);
-    console.error(`[${requestId}] WORKERS_AI_ERROR:`, error);
+    const detail = error?.message || String(error) || 'Workers AI request failed.';
+    console.error(`[${requestId}] WORKERS_AI_ERROR`, {
+      name: error?.name || 'Error',
+      message: detail,
+      stack: error?.stack || null,
+      model: MODEL,
+    });
+
     return json({
       error: 'AI service error.',
       code: 'WORKERS_AI_ERROR',

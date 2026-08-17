@@ -66,36 +66,69 @@ export default {
 
 async function handleChat(request, env) {
   const cors = corsHeaders(request);
+  const requestId = crypto.randomUUID();
+
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
-  if (request.method === 'GET') return json({ service: 'Redlighte AI', status: env.AI ? 'ready' : 'not_configured', provider: 'cloudflare-workers-ai', model: MODEL }, 200, cors);
+  if (request.method === 'GET') return json({ service: 'Redlighte AI', status: env.AI ? 'ready' : 'not_configured', provider: 'cloudflare-workers-ai', model: MODEL, request_id: requestId }, 200, cors);
   if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405, { ...cors, Allow: 'GET,POST,OPTIONS' });
 
   const origin = request.headers.get('Origin');
-  if (origin && !isAllowedOrigin(origin)) return json({ error: 'Origin not allowed.' }, 403, cors);
-  if (!env.AI) return json({ error: 'AI service is not configured.' }, 503, cors);
+  if (origin && !isAllowedOrigin(origin)) return json({ error: 'Origin not allowed.', request_id: requestId }, 403, cors);
+  if (!env.AI) {
+    console.error(`[${requestId}] Workers AI binding is missing.`);
+    return json({ error: 'AI service is not configured.', code: 'AI_NOT_CONFIGURED', request_id: requestId }, 503, cors);
+  }
 
   let body;
-  try { body = await request.json(); } catch { return json({ error: 'Invalid JSON body.' }, 400, cors); }
+  try {
+    body = await request.json();
+  } catch (error) {
+    console.error(`[${requestId}] Invalid JSON:`, error?.message || error);
+    return json({ error: 'Invalid JSON body.', code: 'INVALID_JSON', request_id: requestId }, 400, cors);
+  }
+
   const input = typeof body?.message === 'string' ? body.message.trim() : '';
-  if (!input) return json({ error: 'Message is required.' }, 400, cors);
-  if (input.length > MAX_MESSAGE_LENGTH) return json({ error: 'Message is too long.' }, 413, cors);
+  if (!input) return json({ error: 'Message is required.', code: 'MESSAGE_REQUIRED', request_id: requestId }, 400, cors);
+  if (input.length > MAX_MESSAGE_LENGTH) return json({ error: 'Message is too long.', code: 'MESSAGE_TOO_LONG', request_id: requestId }, 413, cors);
 
   const incoming = Array.isArray(body?.messages) ? body.messages : [];
   const messages = incoming.filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string').slice(-MAX_MESSAGES).map(m => ({ role: m.role, content: m.content.slice(0, MAX_MESSAGE_LENGTH) }));
   if (!messages.length || messages[messages.length - 1]?.content !== input) messages.push({ role: 'user', content: input });
 
   try {
+    console.log(`[${requestId}] Workers AI request: model=${MODEL}, messages=${messages.length}, input_length=${input.length}`);
+
     const result = await env.AI.run(MODEL, {
       messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
       max_tokens: 700,
       temperature: 0.35,
       top_p: 0.9,
     });
+
+    console.log(`[${requestId}] Workers AI response received.`);
+
     const answer = result?.response || result?.result?.response;
-    if (typeof answer !== 'string' || !answer.trim()) return json({ error: 'The AI service returned an empty response.' }, 502, cors);
-    return json({ message: answer, model: MODEL }, 200, cors);
+    if (typeof answer !== 'string' || !answer.trim()) {
+      console.error(`[${requestId}] Workers AI returned an empty/invalid response:`, JSON.stringify(result));
+      return json({
+        error: 'The AI service returned an empty response.',
+        code: 'EMPTY_AI_RESPONSE',
+        request_id: requestId,
+        upstream: result ?? null,
+      }, 502, cors);
+    }
+
+    return json({ message: answer, model: MODEL, request_id: requestId }, 200, cors);
   } catch (error) {
-    return json({ error: 'AI service error.', code: 'WORKERS_AI_ERROR', detail: error?.message || 'Workers AI request failed.' }, 502, cors);
+    const detail = error?.message || String(error);
+    console.error(`[${requestId}] WORKERS_AI_ERROR:`, error);
+    return json({
+      error: 'AI service error.',
+      code: 'WORKERS_AI_ERROR',
+      detail,
+      error_name: error?.name || 'Error',
+      request_id: requestId,
+    }, 502, cors);
   }
 }
 

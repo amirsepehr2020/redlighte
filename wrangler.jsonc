@@ -4,6 +4,9 @@
   "main": "./worker/index.js",
   "compatibility_date": "2026-08-16",
   "observability": { "enabled": true },
+  "ai": {
+    "binding": "AI"
+  },
   "assets": {
     "directory": ".",
     "binding": "ASSETS",

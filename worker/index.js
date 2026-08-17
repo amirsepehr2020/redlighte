@@ -1,4 +1,4 @@
-const MODEL = '@cf/zai-org/glm-4.7-flash';
+const MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
 const MAX_MESSAGE_LENGTH = 12000;
 const MAX_MESSAGES = 20;
 
@@ -101,18 +101,13 @@ async function handleChat(request, env) {
     const result = await env.AI.run(MODEL, {
       messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
       max_tokens: 700,
-      temperature: 0.35,
-      top_p: 0.9,
+      temperature: 0.45,
     });
 
     const answer = result?.response || result?.result?.response;
     if (typeof answer !== 'string' || !answer.trim()) {
       console.error(`[${requestId}] Workers AI returned an empty/invalid response. result_keys=${result && typeof result === 'object' ? Object.keys(result).join(',') : 'none'}`);
-      return json({
-        error: 'The AI service returned an empty response.',
-        code: 'EMPTY_AI_RESPONSE',
-        request_id: requestId,
-      }, 502, cors);
+      return json({ error: 'The AI service returned an empty response.', code: 'EMPTY_AI_RESPONSE', request_id: requestId }, 502, cors);
     }
 
     console.log(`[${requestId}] Workers AI request completed successfully.`);
@@ -126,13 +121,7 @@ async function handleChat(request, env) {
       model: MODEL,
     });
 
-    return json({
-      error: 'AI service error.',
-      code: 'WORKERS_AI_ERROR',
-      detail,
-      error_name: error?.name || 'Error',
-      request_id: requestId,
-    }, 502, cors);
+    return json({ error: 'AI service error.', code: 'WORKERS_AI_ERROR', detail, error_name: error?.name || 'Error', request_id: requestId }, 502, cors);
   }
 }
 

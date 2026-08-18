@@ -1,8 +1,6 @@
-const MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
-const MAX_MESSAGE_LENGTH = 12000;
-const MAX_MESSAGES = 20;
-
-const SYSTEM_PROMPT = `You are Redlighte AI, the official AI assistant of Redlighte.
+const MODEL='@cf/qwen/qwen3-30b-a3b-fp8';
+const MAX_MESSAGE_LENGTH=12000,MAX_MESSAGES=20,MAX_HISTORY=20,SESSION_TTL=2592000;
+const SYSTEM_PROMPT=`You are Redlighte AI, the official AI assistant of Redlighte.
 
 IDENTITY
 - Your name is Redlighte AI.
@@ -83,86 +81,14 @@ EMOJI STYLE AND USAGE
 
 FINAL CHECK
 Before answering, silently verify that you understood the intent, used the correct language, preserved context, wrote natural Iranian Persian when applicable, answered directly, and did not invent information or expose secrets.`;
-
-export default {
-  async fetch(request, env) {
-    const url = new URL(request.url);
-    if (url.pathname === '/api/chat' || url.pathname.startsWith('/api/chat/')) return handleChat(request, env);
-    return env.ASSETS.fetch(request);
-  },
-};
-
-async function handleChat(request, env) {
-  const cors = corsHeaders(request);
-  const requestId = crypto.randomUUID();
-
-  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
-  if (request.method === 'GET') return json({ service: 'Redlighte AI', status: env.AI ? 'ready' : 'not_configured', provider: 'cloudflare-workers-ai', model: MODEL, request_id: requestId }, 200, cors);
-  if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405, { ...cors, Allow: 'GET,POST,OPTIONS' });
-
-  const origin = request.headers.get('Origin');
-  if (origin && !isAllowedOrigin(origin)) return json({ error: 'Origin not allowed.', request_id: requestId }, 403, cors);
-  if (!env.AI) {
-    console.error(`[${requestId}] Workers AI binding is missing.`);
-    return json({ error: 'AI service is not configured.', code: 'AI_NOT_CONFIGURED', request_id: requestId }, 503, cors);
-  }
-
-  let body;
-  try {
-    body = await request.json();
-  } catch (error) {
-    console.error(`[${requestId}] Invalid JSON:`, error?.message || error);
-    return json({ error: 'Invalid JSON body.', code: 'INVALID_JSON', request_id: requestId }, 400, cors);
-  }
-
-  const input = typeof body?.message === 'string' ? body.message.trim() : '';
-  if (!input) return json({ error: 'Message is required.', code: 'MESSAGE_REQUIRED', request_id: requestId }, 400, cors);
-  if (input.length > MAX_MESSAGE_LENGTH) return json({ error: 'Message is too long.', code: 'MESSAGE_TOO_LONG', request_id: requestId }, 413, cors);
-
-  const incoming = Array.isArray(body?.messages) ? body.messages : [];
-  const messages = incoming.filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string').slice(-MAX_MESSAGES).map(m => ({ role: m.role, content: m.content.slice(0, MAX_MESSAGE_LENGTH) }));
-  if (!messages.length || messages[messages.length - 1]?.content !== input) messages.push({ role: 'user', content: input });
-
-  try {
-    console.log(`[${requestId}] Workers AI request: model=${MODEL}, messages=${messages.length}, input_length=${input.length}`);
-
-    const result = await env.AI.run(MODEL, {
-      messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
-      max_tokens: 700,
-      temperature: 0.45,
-    });
-
-    const answer = result?.response || result?.result?.response;
-    if (typeof answer !== 'string' || !answer.trim()) {
-      console.error(`[${requestId}] Workers AI returned an empty/invalid response. result_keys=${result && typeof result === 'object' ? Object.keys(result).join(',') : 'none'}`);
-      return json({ error: 'The AI service returned an empty response.', code: 'EMPTY_AI_RESPONSE', request_id: requestId }, 502, cors);
-    }
-
-    console.log(`[${requestId}] Workers AI request completed successfully.`);
-    return json({ message: answer, model: MODEL, request_id: requestId }, 200, cors);
-  } catch (error) {
-    const detail = error?.message || String(error) || 'Workers AI request failed.';
-    console.error(`[${requestId}] WORKERS_AI_ERROR`, {
-      name: error?.name || 'Error',
-      message: detail,
-      stack: error?.stack || null,
-      model: MODEL,
-    });
-
-    return json({ error: 'AI service error.', code: 'WORKERS_AI_ERROR', detail, error_name: error?.name || 'Error', request_id: requestId }, 502, cors);
-  }
-}
-
-function json(data, status = 200, headers = {}) {
-  return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...headers } });
-}
-
-function isAllowedOrigin(origin) {
-  try { const url = new URL(origin); return url.origin === 'https://redlighte.ir' || url.origin === 'https://www.redlighte.ir' || url.hostname.endsWith('.workers.dev'); } catch { return false; }
-}
-
-function corsHeaders(request) {
-  const origin = request.headers.get('Origin');
-  const allowed = origin && isAllowedOrigin(origin) ? origin : 'https://redlighte.ir';
-  return { 'Access-Control-Allow-Origin': allowed, 'Access-Control-Allow-Methods': 'GET,POST,OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type', Vary: 'Origin' };
-}
+export default{async fetch(request,env){const url=new URL(request.url);if(url.pathname.startsWith('/api/auth/'))return handleAuth(request,env,url.pathname);if(url.pathname==='/api/account/data')return handleAccountData(request,env);if(url.pathname==='/api/chat'||url.pathname.startsWith('/api/chat/'))return handleChat(request,env);return env.ASSETS.fetch(request)}};
+async function handleAuth(request,env,path){const cors=corsHeaders(request);if(request.method==='OPTIONS')return new Response(null,{status:204,headers:cors});if(!originAllowed(request))return json({error:'Origin not allowed.'},403,cors);try{if(path==='/api/auth/me'&&request.method==='GET'){const user=await currentUser(request,env);return user?json({user:publicUser(user)},200,cors):json({error:'Not authenticated.'},401,cors)}if(path==='/api/auth/logout'&&request.method==='POST')return json({ok:true},200,{...cors,'Set-Cookie':clearCookie()});if(path==='/api/auth/signup'&&request.method==='POST')return signup(request,env,cors);if(path==='/api/auth/login'&&request.method==='POST')return login(request,env,cors);return json({error:'Not found.'},404,cors)}catch(error){console.error('AUTH_ERROR',error?.stack||error);return json({error:'Authentication service error.'},500,cors)}}
+async function signup(request,env,cors){const body=await readJson(request),name=String(body?.name||'').trim(),username=String(body?.username||'').trim().toLowerCase(),password=String(body?.password||'');if(name.length<2||name.length>60)return json({error:'Name must be between 2 and 60 characters.'},400,cors);if(!/^[a-z0-9._-]{3,24}$/.test(username))return json({error:'Username must be 3–24 characters and use letters, numbers, dot, underscore or hyphen.'},400,cors);if(password.length<8||password.length>128)return json({error:'Password must be between 8 and 128 characters.'},400,cors);const index=await readJsonFile(env,'users/_index.json',{users:{}});if(index.users?.[username])return json({error:'That username is already taken.'},409,cors);const id=crypto.randomUUID(),created_at=new Date().toISOString(),salt=randomBytes(16),hash=await hashPassword(password,salt),account={id,name,username,created_at,password:{algorithm:'PBKDF2-SHA-256',iterations:120000,salt:toB64(salt),hash:toB64(hash)}};await putJsonFile(env,`users/${id}/account.json`,account,`Create account ${username}`);await putJsonFile(env,`users/${id}/settings.json`,{theme:'dark',accent:'#ff3045',language:'en'},`Initialize settings for ${username}`);await putJsonFile(env,`users/${id}/chats.json`,{chats:[]},`Initialize chats for ${username}`);index.users[username]={id,name,created_at};await putJsonFile(env,'users/_index.json',index,`Register ${username}`);return json({user:publicUser(account)},201,{...cors,'Set-Cookie':await sessionCookie({id,username},env)})}
+async function login(request,env,cors){const body=await readJson(request),username=String(body?.username||'').trim().toLowerCase(),password=String(body?.password||'');if(!username||!password)return json({error:'Username and password are required.'},400,cors);const index=await readJsonFile(env,'users/_index.json',{users:{}}),entry=index.users?.[username];if(!entry)return json({error:'Invalid username or password.'},401,cors);const account=await readJsonFile(env,`users/${entry.id}/account.json`,null);if(!account?.password)return json({error:'Invalid username or password.'},401,cors);if(!await verifyPassword(password,account.password))return json({error:'Invalid username or password.'},401,cors);return json({user:publicUser(account)},200,{...cors,'Set-Cookie':await sessionCookie({id:account.id,username:account.username},env)})}
+async function handleAccountData(request,env){const cors=corsHeaders(request);if(request.method==='OPTIONS')return new Response(null,{status:204,headers:cors});if(!originAllowed(request))return json({error:'Origin not allowed.'},403,cors);const user=await currentUser(request,env);if(!user)return json({error:'Authentication required.'},401,cors);if(request.method==='GET'){const settings=await readJsonFile(env,`users/${user.id}/settings.json`,{theme:'dark',accent:'#ff3045',language:'en'}),chats=await readJsonFile(env,`users/${user.id}/chats.json`,{chats:[]});return json({settings,history:Array.isArray(chats.chats)?chats.chats:[]},200,cors)}if(request.method==='POST'){const body=await readJson(request),history=Array.isArray(body?.history)?body.history.slice(-MAX_HISTORY):[],settings=body?.settings||{},safeSettings={theme:settings.theme==='light'?'light':'dark',accent:/^#[0-9a-fA-F]{6}$/.test(settings.accent)?settings.accent:'#ff3045',language:['en','fa','ko','zh','tr','fr','es','hi'].includes(settings.language)?settings.language:'en'};await putJsonFile(env,`users/${user.id}/chats.json`,{chats:history},`Sync chats for ${user.username}`);await putJsonFile(env,`users/${user.id}/settings.json`,safeSettings,`Sync settings for ${user.username}`);return json({ok:true},200,cors)}return json({error:'Method not allowed.'},405,{...cors,Allow:'GET,POST,OPTIONS'})}
+async function handleChat(request,env){const cors=corsHeaders(request),requestId=crypto.randomUUID();if(request.method==='OPTIONS')return new Response(null,{status:204,headers:cors});if(request.method==='GET')return json({service:'Redlighte AI',status:env.AI?'ready':'not_configured',provider:'cloudflare-workers-ai',model:MODEL,request_id:requestId},200,cors);if(request.method!=='POST')return json({error:'Method not allowed.'},405,{...cors,Allow:'GET,POST,OPTIONS'});if(!originAllowed(request))return json({error:'Origin not allowed.',request_id:requestId},403,cors);const user=await currentUser(request,env);if(!user)return json({error:'Authentication required.',code:'AUTH_REQUIRED',request_id:requestId},401,cors);if(!env.AI)return json({error:'AI service is not configured.',code:'AI_NOT_CONFIGURED',request_id:requestId},503,cors);let body;try{body=await request.json()}catch{return json({error:'Invalid JSON body.',code:'INVALID_JSON',request_id:requestId},400,cors)}const input=typeof body?.message==='string'?body.message.trim():'';if(!input)return json({error:'Message is required.',code:'MESSAGE_REQUIRED',request_id:requestId},400,cors);if(input.length>MAX_MESSAGE_LENGTH)return json({error:'Message is too long.',code:'MESSAGE_TOO_LONG',request_id:requestId},413,cors);const incoming=Array.isArray(body?.messages)?body.messages:[],messages=incoming.filter(m=>m&&(m.role==='user'||m.role==='assistant')&&typeof m.content==='string').slice(-MAX_MESSAGES).map(m=>({role:m.role,content:m.content.slice(0,MAX_MESSAGE_LENGTH)}));if(!messages.length||messages[messages.length-1]?.content!==input)messages.push({role:'user',content:input});try{const result=await env.AI.run(MODEL,{messages:[{role:'system',content:SYSTEM_PROMPT},...messages],max_tokens:700,temperature:.45}),answer=result?.response||result?.result?.response;if(typeof answer!=='string'||!answer.trim())return json({error:'The AI service returned an empty response.',code:'EMPTY_AI_RESPONSE',request_id:requestId},502,cors);return json({message:answer,model:MODEL,request_id:requestId},200,cors)}catch(error){const detail=error?.message||String(error)||'Workers AI request failed.';console.error(`[${requestId}] WORKERS_AI_ERROR`,{name:error?.name||'Error',message:detail,model:MODEL});return json({error:'AI service error.',code:'WORKERS_AI_ERROR',detail,error_name:error?.name||'Error',request_id:requestId},502,cors)}}
+async function currentUser(request,env){const token=getCookie(request.headers.get('Cookie'),'redlighte_session');if(!token||!env.AUTH_SECRET)return null;const payload=await verifySession(token,env.AUTH_SECRET);if(!payload||payload.exp<Date.now()/1000)return null;const account=await readJsonFile(env,`users/${payload.id}/account.json`,null);return account?.id===payload.id?account:null}function publicUser(a){return{id:a.id,name:a.name,username:a.username,created_at:a.created_at}}
+async function sessionCookie(data,env){const exp=Math.floor(Date.now()/1000)+SESSION_TTL,payload=base64url(JSON.stringify({...data,exp})),sig=base64url(await sign(payload,env.AUTH_SECRET));return`redlighte_session=${payload}.${sig}; Max-Age=${SESSION_TTL}; Path=/; HttpOnly; Secure; SameSite=Lax`}
+async function verifySession(token,secret){const [payload,sig]=String(token).split('.');if(!payload||!sig)return null;try{if(!await verify(payload,fromB64url(sig),secret))return null;return JSON.parse(new TextDecoder().decode(fromB64url(payload)))}catch{return null}}async function sign(value,secret){const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(secret),{name:'HMAC',hash:'SHA-256'},false,['sign']);return new Uint8Array(await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(value)))}async function verify(value,signature,secret){const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(secret),{name:'HMAC',hash:'SHA-256'},false,['verify']);return crypto.subtle.verify('HMAC',key,signature,new TextEncoder().encode(value))}async function hashPassword(password,salt){const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(password),'PBKDF2',false,['deriveBits']);return new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',salt,iterations:120000,hash:'SHA-256'},base,256))}async function verifyPassword(password,stored){const hash=await hashPassword(password,fromB64(stored.salt)),expected=fromB64(stored.hash);return hash.length===expected.length&&hash.every((v,i)=>v===expected[i])}function randomBytes(n){const b=new Uint8Array(n);crypto.getRandomValues(b);return b}
+async function readJsonFile(env,path,fallback){const r=await github(env,path,'GET');if(r.status===404)return fallback;if(!r.ok)throw new Error(`GitHub read failed: ${r.status}`);const data=await r.json();return JSON.parse(decodeBase64(data.content))}async function putJsonFile(env,path,value,message){const existing=await github(env,path,'GET'),body={message,content:encodeBase64(JSON.stringify(value,null,2)),branch:'main'};if(existing.ok)body.sha=(await existing.json()).sha;const r=await github(env,path,'PUT',body);if(!r.ok){console.error('GITHUB_WRITE_ERROR',path,r.status,await r.text());throw new Error(`GitHub write failed: ${r.status}`)}return r.json()}
+async function github(env,path,method,body){return fetch(`https://api.github.com/repos/${env.GITHUB_REPO}/contents/${path}`,{method,headers:{Accept:'application/vnd.github+json',Authorization:`Bearer ${env.GITHUB_TOKEN}`,'X-GitHub-Api-Version':'2026-03-10','User-Agent':'Redlighte'},body:body?JSON.stringify(body):undefined})}async function readJson(request){try{return await request.json()}catch{throw new Error('Invalid JSON.')}}function getCookie(header,name){return String(header||'').split(';').map(x=>x.trim()).find(x=>x.startsWith(name+'='))?.slice(name.length+1)||''}function clearCookie(){return'redlighte_session=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Lax'}function base64url(s){return toB64(new TextEncoder().encode(s)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}function fromB64url(s){return fromB64(s.replace(/-/g,'+').replace(/_/g,'/')+'='.repeat((4-s.length%4)%4))}function toB64(bytes){let out='';for(let i=0;i<bytes.length;i+=0x8000)out+=String.fromCharCode(...bytes.subarray(i,i+0x8000));return btoa(out)}function fromB64(s){const bin=atob(String(s).replace(/\s/g,'')),out=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)out[i]=bin.charCodeAt(i);return out}function encodeBase64(text){return toB64(new TextEncoder().encode(text))}function decodeBase64(text){return new TextDecoder().decode(fromB64(text))}function originAllowed(request){const origin=request.headers.get('Origin');return!origin||isAllowedOrigin(origin)}function isAllowedOrigin(origin){try{const u=new URL(origin);return u.origin==='https://redlighte.ir'||u.origin==='https://www.redlighte.ir'||u.hostname.endsWith('.workers.dev')}catch{return false}}function corsHeaders(request){const origin=request.headers.get('Origin'),allowed=origin&&isAllowedOrigin(origin)?origin:'https://redlighte.ir';return{'Access-Control-Allow-Origin':allowed,'Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type','Access-Control-Allow-Credentials':'true',Vary:'Origin'}}function json(data,status=200,headers={}){return new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store',...headers}})}

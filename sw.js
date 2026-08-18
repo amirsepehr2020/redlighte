@@ -1,4 +1,4 @@
-const CACHE='redlighte-shell-v3';
+const CACHE='redlighte-shell-v4';
 const APP_SHELL=['/','/index.html','/styles.css','/auth.css','/app.js','/auth.js','/language2.js','/share.js','/code-render.js','/pwa.js','/manifest.webmanifest','/assets/favicon.svg','/assets/icon-192.svg','/assets/icon-512.svg'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(APP_SHELL)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()))});

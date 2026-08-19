@@ -1,8 +1,10 @@
-const MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
-const MAX_MESSAGE_LENGTH = 12000;
-const MAX_MESSAGES = 20;
+const MODEL='@cf/qwen/qwen3-30b-a3b-fp8';
+const MAX_MESSAGE_LENGTH=12000;
+const MAX_MESSAGES=20;
+const PBKDF2_ITERATIONS=100000;
+const DATA_REPO='amirsepehr2020/redlighte-data';
 
-const SYSTEM_PROMPT = `You are Redlighte AI, the official AI assistant of Redlighte.
+const SYSTEM_PROMPT=`You are Redlighte AI, the official AI assistant of Redlighte.
 
 IDENTITY
 - Your name is Redlighte AI.
@@ -15,21 +17,20 @@ Persian is a first-class language. When the user writes Persian, ALWAYS understa
 
 PERSIAN UNDERSTANDING
 Understand Persian as people actually write it online: colloquial speech, slang, typos, missing spaces, shortened words, informal spelling, and Persian-English mixed messages.
-Understand expressions such as «حاجی»، «داداش»، «ببین»، «میخوام»، «می‌خوام»، «چیکار کنم»، «چی میشه»، «یعنی چی»، «اصلاً»، «اوکی»، «دمت گرم»، «درستش کن»، «یه کاری بکن»، «جواب نمیده» naturally and infer their intended meaning from context. Do not correct the user's writing unless asked.
+Understand informal Persian naturally and infer intended meaning from context. Do not correct the user's writing unless asked.
 
 NATIVE IRANIAN PERSIAN
 - Understand the meaning first, then write Persian naturally. Never translate English sentence structure into Persian.
 - Use natural Iranian Persian vocabulary and word order.
 - Use «ی» and «ک», never Arabic «ي» and «ك».
-- Use natural نیم‌فاصله: «می‌شود»، «می‌کنم»، «نمی‌دانم»، «آن‌ها»، «به‌خاطر».
-- Use Persian punctuation naturally: «،»، «؛»، «؟».
+- Use natural نیم‌فاصله and Persian punctuation.
 - Avoid broken, robotic, overly formal, literary, or machine-translated Persian.
 - Do not randomly switch to English.
 - Keep technical names, code, commands, URLs, filenames, and product/API names in their original form when useful.
 
 CONTEXT AND INTENT
 - Understand intent, not just keywords.
-- Use conversation history to resolve «این»، «اون»، «همون»، «قبلی»، «پروژه»، «بک»، «فرانت» and similar references.
+- Use conversation history to resolve references naturally.
 - Never ask for information already available in the conversation.
 - If the request is clear, answer directly.
 - Ask one focused clarification only when ambiguity materially changes the answer.
@@ -53,116 +54,38 @@ Never expose credentials, tokens, API keys, secrets, or private data. Never put 
 REDLIGHTE VOICE
 Be modern, intelligent, fast, friendly, confident and human. Do not sound like a generic translated chatbot. Be warm without being excessively familiar and concise without being cold.
 
-ADDITIONAL RESPONSE QUALITY RULES
-- Prefer useful, concrete answers over generic advice or filler.
-- Before answering, identify the user's actual goal and tailor the response to that goal.
-- When explaining something, start with the simplest useful explanation, then add detail only when it helps.
-- For troubleshooting, reason from the available symptoms and context, prioritize the most likely causes, and give actionable steps in a practical order.
-- For programming and technical requests, preserve the user's existing architecture and conventions when possible. Do not suggest unnecessary rewrites or unrelated changes.
-- When providing code, make it complete enough to use, keep it syntactically correct, and clearly state where it belongs when that matters.
-- Distinguish facts, assumptions, and uncertainty. Never present a guess as a confirmed fact.
-- If the user asks for an action that can be performed directly in the current environment, do not merely explain how to do it; perform the action when you actually have the required tool or capability.
-- If an action cannot be performed, say so clearly and provide the closest useful next step.
-- Do not repeat the user's request unnecessarily. Avoid repetitive conclusions such as «امیدوارم کمک کرده باشه» unless they add value.
-- Keep answers proportional to the request: short questions deserve short answers, while complex tasks deserve enough detail to be genuinely useful.
-- When the user is clearly asking for a direct result, prioritize the result over a long explanation.
-
-EMOJI STYLE AND USAGE
-- Emojis are part of Redlighte's natural communication style, not decoration that must appear in every answer.
-- Use emojis mainly to reinforce emotion, tone, emphasis, or readability.
-- In casual Persian conversations, friendly reactions such as «😄»، «😂»، «🔥»، «❤️»، «😎»، «👀»، «🥲» or «😭» may be appropriate when they genuinely match the context.
-- Match the user's emoji intensity and emotional tone. If the user uses playful or emotional emojis, it is okay to respond similarly.
-- Do not use the same emoji repeatedly just to fill space.
-- Avoid placing emojis after every sentence or every bullet.
-- Prefer 0–3 emojis in a normal casual response, and use more only when the user's tone clearly calls for it.
-- For serious, academic, technical, legal, medical, safety, or professional topics, use few or no emojis unless they materially improve readability.
-- Do not replace important words, warnings, technical terms, numbers, or instructions with emojis.
-- Do not use emojis inside code, commands, filenames, URLs, JSON, or other syntax-sensitive content unless the user explicitly asks for them.
-- Use emojis naturally at the end of a sentence, beside a short heading, or as a visual marker when appropriate.
-- Never let emoji usage reduce clarity, professionalism, or accuracy.
-
 FINAL CHECK
 Before answering, silently verify that you understood the intent, used the correct language, preserved context, wrote natural Iranian Persian when applicable, answered directly, and did not invent information or expose secrets.`;
 
-export default {
-  async fetch(request, env) {
-    const url = new URL(request.url);
-    if (url.pathname === '/api/chat' || url.pathname.startsWith('/api/chat/')) return handleChat(request, env);
-    return env.ASSETS.fetch(request);
-  },
-};
+export default{async fetch(request,env){const url=new URL(request.url);if(url.pathname.startsWith('/api/auth/'))return handleAuth(request,env,url.pathname);if(url.pathname==='/api/account/data')return handleAccountData(request,env);if(url.pathname==='/api/chat'||url.pathname.startsWith('/api/chat/'))return handleChat(request,env);return env.ASSETS.fetch(request)}};
 
-async function handleChat(request, env) {
-  const cors = corsHeaders(request);
-  const requestId = crypto.randomUUID();
+async function handleAuth(request,env,path){const cors=corsHeaders(request);if(request.method==='OPTIONS')return new Response(null,{status:204,headers:cors});try{if(path==='/api/auth/me'&&request.method==='GET'){const session=await readSession(request,env);return session?json({authenticated:true,user:{id:session.id,name:session.name,username:session.username}},200,cors):json({authenticated:false},200,cors)}if(path==='/api/auth/logout'&&request.method==='POST')return new Response(null,{status:204,headers:{...cors,'Set-Cookie':clearCookie(request)}});if(path==='/api/auth/signup'&&request.method==='POST')return signup(request,env,cors);if(path==='/api/auth/login'&&request.method==='POST')return login(request,env,cors);return json({error:'Not found.'},404,cors)}catch(e){console.error('AUTH_ERROR',e);return json({error:'Authentication service is temporarily unavailable.'},500,cors)}}
 
-  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
-  if (request.method === 'GET') return json({ service: 'Redlighte AI', status: env.AI ? 'ready' : 'not_configured', provider: 'cloudflare-workers-ai', model: MODEL, request_id: requestId }, 200, cors);
-  if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405, { ...cors, Allow: 'GET,POST,OPTIONS' });
+async function signup(request,env,cors){const body=await readJson(request);const name=clean(body?.name,80),username=clean(body?.username,32).toLowerCase(),password=typeof body?.password==='string'?body.password:'';if(name.length<1||!validUsername(username)||password.length<6)return json({error:'Please enter a valid name, username and password (minimum 6 characters).'},400,cors);const path=`users/${username}/data.json`;if(await githubFile(env,path))return json({error:'Username already exists.'},409,cors);const id=crypto.randomUUID();const passwordHash=await hashPassword(password);const data={user:{id,name,username,passwordHash},settings:{theme:'dark',accent:'#ff3045'},chats:[]};await githubWrite(env,path,data,null,'Create account');const cookie=await makeCookie(request,env,{id,name,username});return new Response(JSON.stringify({user:{id,name,username}}),{status:201,headers:{...cors,'Content-Type':'application/json','Cache-Control':'no-store','Set-Cookie':cookie}})}
 
-  const origin = request.headers.get('Origin');
-  if (origin && !isAllowedOrigin(origin)) return json({ error: 'Origin not allowed.', request_id: requestId }, 403, cors);
-  if (!env.AI) {
-    console.error(`[${requestId}] Workers AI binding is missing.`);
-    return json({ error: 'AI service is not configured.', code: 'AI_NOT_CONFIGURED', request_id: requestId }, 503, cors);
-  }
+async function login(request,env,cors){const body=await readJson(request);const username=clean(body?.username,32).toLowerCase(),password=typeof body?.password==='string'?body.password:'';if(!validUsername(username)||!password)return json({error:'Username and password are required.'},400,cors);const file=await githubFile(env,`users/${username}/data.json`);if(!file)return json({error:'Invalid username or password.'},401,cors);const data=JSON.parse(file.content);if(!(await verifyPassword(password,data.user.passwordHash)))return json({error:'Invalid username or password.'},401,cors);const cookie=await makeCookie(request,env,data.user);return new Response(JSON.stringify({user:{id:data.user.id,name:data.user.name,username:data.user.username}}),{status:200,headers:{...cors,'Content-Type':'application/json','Cache-Control':'no-store','Set-Cookie':cookie}})}
 
-  let body;
-  try {
-    body = await request.json();
-  } catch (error) {
-    console.error(`[${requestId}] Invalid JSON:`, error?.message || error);
-    return json({ error: 'Invalid JSON body.', code: 'INVALID_JSON', request_id: requestId }, 400, cors);
-  }
+async function handleAccountData(request,env){const cors=corsHeaders(request);if(request.method==='OPTIONS')return new Response(null,{status:204,headers:cors});const session=await readSession(request,env);if(!session)return json({error:'Unauthorized.'},401,cors);const path=`users/${session.username}/data.json`;const file=await githubFile(env,path);if(!file)return json({error:'Account data not found.'},404,cors);if(request.method==='GET'){const data=JSON.parse(file.content);return json({user:{id:data.user.id,name:data.user.name,username:data.user.username},settings:data.settings||{},chats:Array.isArray(data.chats)?data.chats:[]},200,cors)}if(request.method!=='PUT')return json({error:'Method not allowed.'},405,{...cors,Allow:'GET,PUT,OPTIONS'});const body=await readJson(request);const data=JSON.parse(file.content);if(body?.settings&&typeof body.settings==='object')data.settings={...data.settings,...body.settings};if(Array.isArray(body?.chats))data.chats=body.chats.slice(-50);await githubWrite(env,path,data,file.sha,'Update account data');return json({ok:true},200,cors)}
 
-  const input = typeof body?.message === 'string' ? body.message.trim() : '';
-  if (!input) return json({ error: 'Message is required.', code: 'MESSAGE_REQUIRED', request_id: requestId }, 400, cors);
-  if (input.length > MAX_MESSAGE_LENGTH) return json({ error: 'Message is too long.', code: 'MESSAGE_TOO_LONG', request_id: requestId }, 413, cors);
+async function handleChat(request,env){const cors=corsHeaders(request),requestId=crypto.randomUUID();if(request.method==='OPTIONS')return new Response(null,{status:204,headers:cors});if(request.method==='GET')return json({service:'Redlighte AI',status:env.AI?'ready':'not_configured',provider:'cloudflare-workers-ai',model:MODEL,request_id:requestId},200,cors);if(request.method!=='POST')return json({error:'Method not allowed.'},405,{...cors,Allow:'GET,POST,OPTIONS'});if(!env.AI)return json({error:'AI service is not configured.',code:'AI_NOT_CONFIGURED',request_id:requestId},503,cors);let body;try{body=await request.json()}catch{return json({error:'Invalid JSON body.',code:'INVALID_JSON',request_id:requestId},400,cors)}const input=typeof body?.message==='string'?body.message.trim():'';if(!input)return json({error:'Message is required.',code:'MESSAGE_REQUIRED',request_id:requestId},400,cors);if(input.length>MAX_MESSAGE_LENGTH)return json({error:'Message is too long.',code:'MESSAGE_TOO_LONG',request_id:requestId},413,cors);const incoming=Array.isArray(body?.messages)?body.messages:[];const messages=incoming.filter(m=>m&&(m.role==='user'||m.role==='assistant')&&typeof m.content==='string').slice(-MAX_MESSAGES).map(m=>({role:m.role,content:m.content.slice(0,MAX_MESSAGE_LENGTH)}));if(!messages.length||messages[messages.length-1]?.content!==input)messages.push({role:'user',content:input});try{const result=await env.AI.run(MODEL,{messages:[{role:'system',content:SYSTEM_PROMPT},...messages],max_tokens:700,temperature:.45});const answer=result?.response||result?.result?.response;if(typeof answer!=='string'||!answer.trim())return json({error:'The AI service returned an empty response.',code:'EMPTY_AI_RESPONSE',request_id:requestId},502,cors);return json({message:answer,model:MODEL,request_id:requestId},200,cors)}catch(error){console.error(`[${requestId}] WORKERS_AI_ERROR`,error);return json({error:'AI service error.',code:'WORKERS_AI_ERROR',detail:error?.message||String(error),request_id:requestId},502,cors)}}
 
-  const incoming = Array.isArray(body?.messages) ? body.messages : [];
-  const messages = incoming.filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string').slice(-MAX_MESSAGES).map(m => ({ role: m.role, content: m.content.slice(0, MAX_MESSAGE_LENGTH) }));
-  if (!messages.length || messages[messages.length - 1]?.content !== input) messages.push({ role: 'user', content: input });
-
-  try {
-    console.log(`[${requestId}] Workers AI request: model=${MODEL}, messages=${messages.length}, input_length=${input.length}`);
-
-    const result = await env.AI.run(MODEL, {
-      messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
-      max_tokens: 700,
-      temperature: 0.45,
-    });
-
-    const answer = result?.response || result?.result?.response;
-    if (typeof answer !== 'string' || !answer.trim()) {
-      console.error(`[${requestId}] Workers AI returned an empty/invalid response. result_keys=${result && typeof result === 'object' ? Object.keys(result).join(',') : 'none'}`);
-      return json({ error: 'The AI service returned an empty response.', code: 'EMPTY_AI_RESPONSE', request_id: requestId }, 502, cors);
-    }
-
-    console.log(`[${requestId}] Workers AI request completed successfully.`);
-    return json({ message: answer, model: MODEL, request_id: requestId }, 200, cors);
-  } catch (error) {
-    const detail = error?.message || String(error) || 'Workers AI request failed.';
-    console.error(`[${requestId}] WORKERS_AI_ERROR`, {
-      name: error?.name || 'Error',
-      message: detail,
-      stack: error?.stack || null,
-      model: MODEL,
-    });
-
-    return json({ error: 'AI service error.', code: 'WORKERS_AI_ERROR', detail, error_name: error?.name || 'Error', request_id: requestId }, 502, cors);
-  }
-}
-
-function json(data, status = 200, headers = {}) {
-  return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...headers } });
-}
-
-function isAllowedOrigin(origin) {
-  try { const url = new URL(origin); return url.origin === 'https://redlighte.ir' || url.origin === 'https://www.redlighte.ir' || url.hostname.endsWith('.workers.dev'); } catch { return false; }
-}
-
-function corsHeaders(request) {
-  const origin = request.headers.get('Origin');
-  const allowed = origin && isAllowedOrigin(origin) ? origin : 'https://redlighte.ir';
-  return { 'Access-Control-Allow-Origin': allowed, 'Access-Control-Allow-Methods': 'GET,POST,OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type', Vary: 'Origin' };
-}
+async function githubFile(env,path){const r=await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/${path}?ref=main`,{headers:githubHeaders(env)});if(r.status===404)return null;if(!r.ok)throw new Error(`GitHub GET ${r.status}`);const x=await r.json();const bytes=Uint8Array.from(atob(x.content.replace(/\n/g,'')),c=>c.charCodeAt(0));return{sha:x.sha,content:new TextDecoder().decode(bytes)}}
+async function githubWrite(env,path,data,sha,message){const content=toBase64(JSON.stringify(data,null,2));const r=await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/${path}`,{method:'PUT',headers:{...githubHeaders(env),'Content-Type':'application/json'},body:JSON.stringify({message,content,branch:'main',...(sha?{sha}:{})})});if(!r.ok)throw new Error(`GitHub PUT ${r.status}: ${await r.text()}`)}
+function githubHeaders(env){return{Authorization:`Bearer ${env.GITHUB_TOKEN}`,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'Redlighte'}}
+function toBase64(text){const bytes=new TextEncoder().encode(text);let s='';for(let i=0;i<bytes.length;i+=0x8000)s+=String.fromCharCode(...bytes.subarray(i,i+0x8000));return btoa(s)}
+async function readJson(request){try{return await request.json()}catch{throw new Error('Invalid JSON')}}
+function clean(v,max){return typeof v==='string'?v.trim().slice(0,max):''}
+function validUsername(v){return /^[a-z0-9][a-z0-9_.-]{2,31}$/.test(v)}
+async function hashPassword(password){const salt=crypto.getRandomValues(new Uint8Array(16));const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(password),'PBKDF2',false,['deriveBits']);const bits=await crypto.subtle.deriveBits({name:'PBKDF2',salt,iterations:PBKDF2_ITERATIONS,hash:'SHA-256'},key,256);return`100000.${hex(salt)}.${hex(new Uint8Array(bits))}`}
+async function verifyPassword(password,stored){try{const [iterations,saltHex,hashHex]=stored.split('.');const salt=fromHex(saltHex),expected=fromHex(hashHex);const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(password),'PBKDF2',false,['deriveBits']);const bits=new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',salt,iterations:Number(iterations),hash:'SHA-256'},key,256));return timingSafeEqual(bits,expected)}catch{return false}}
+function hex(bytes){return[...bytes].map(x=>x.toString(16).padStart(2,'0')).join('')}
+function fromHex(hex){const a=new Uint8Array(hex.length/2);for(let i=0;i<a.length;i++)a[i]=parseInt(hex.slice(i*2,i*2+2),16);return a}
+function timingSafeEqual(a,b){if(a.length!==b.length)return false;let x=0;for(let i=0;i<a.length;i++)x|=a[i]^b[i];return x===0}
+async function makeCookie(request,env,user){const payload=btoa(JSON.stringify({id:user.id,name:user.name,username:user.username,exp:Date.now()+604800000}));const sig=await sign(payload,env.GITHUB_TOKEN);const host=new URL(request.url).hostname;const domain=host==='redlighte.ir'||host==='www.redlighte.ir'?'; Domain=redlighte.ir':'';return`redlighte_session=${payload}.${sig}; Path=/;${domain} HttpOnly; Secure; SameSite=Lax; Max-Age=604800`}
+function clearCookie(request){const host=new URL(request.url).hostname;const domain=host==='redlighte.ir'||host==='www.redlighte.ir'?'; Domain=redlighte.ir':'';return`redlighte_session=; Path=/;${domain} HttpOnly; Secure; SameSite=Lax; Max-Age=0`}
+async function readSession(request,env){const raw=request.headers.get('Cookie')?.match(/(?:^|;\s*)redlighte_session=([^;]+)/)?.[1];if(!raw)return null;try{const [payload,sig]=raw.split('.');if(!payload||!sig||!(await verify(payload,sig,env.GITHUB_TOKEN)))return null;const data=JSON.parse(atob(payload));if(!data.exp||data.exp<Date.now())return null;return data}catch{return null}}
+async function sign(value,secret){const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(secret),'HMAC',false,['sign']);const sig=await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(value));return hex(new Uint8Array(sig))}
+async function verify(value,sig,secret){const expected=await sign(value,secret);return timingSafeEqual(new TextEncoder().encode(expected),new TextEncoder().encode(sig))}
+function json(data,status=200,headers={}){return new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store',...headers}})}
+function isAllowedOrigin(origin){try{const u=new URL(origin);return u.origin==='https://redlighte.ir'||u.origin==='https://www.redlighte.ir'||u.hostname.endsWith('.workers.dev')}catch{return false}}
+function corsHeaders(request){const origin=request.headers.get('Origin');const allowed=origin&&isAllowedOrigin(origin)?origin:'https://redlighte.ir';return{'Access-Control-Allow-Origin':allowed,'Access-Control-Allow-Methods':'GET,POST,PUT,OPTIONS','Access-Control-Allow-Headers':'Content-Type','Access-Control-Allow-Credentials':'true',Vary:'Origin'}}

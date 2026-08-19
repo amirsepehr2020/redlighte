@@ -25,13 +25,14 @@
   let currentLang=localStorage.getItem('redlighte_language')||'en';
   let timer=null;
   let changing=false;
+  let started=false;
 
   const getTitle=()=>document.querySelector('#welcomeView h1');
   const getPhrases=()=>phrases[localStorage.getItem('redlighte_language')||'en']||phrases.en;
 
   function animateTo(text){
     const title=getTitle();
-    if(!title||changing||title.textContent===text)return;
+    if(!title||changing)return;
     changing=true;
     title.classList.remove('hero-title-in');
     title.classList.add('hero-title-animated','hero-title-out');
@@ -46,30 +47,43 @@
 
   function syncLanguage(){
     const next=localStorage.getItem('redlighte_language')||'en';
-    if(next===currentLang)return;
+    if(next===currentLang)return false;
     currentLang=next;
     index=0;
     const list=getPhrases();
     const title=getTitle();
     if(title&&!changing)title.textContent=list[0];
+    return true;
   }
 
   function start(){
+    if(started)return;
     const title=getTitle();
-    if(!title)return;
+    if(!title)return false;
+    started=true;
     title.classList.add('hero-title-animated','hero-title-in');
     const initial=getPhrases();
     const initialText=title.textContent.trim();
     const initialIndex=initial.indexOf(initialText);
     index=initialIndex>=0?initialIndex:0;
     timer=setInterval(()=>{
-      syncLanguage();
+      const languageChanged=syncLanguage();
+      if(languageChanged)return;
       const list=getPhrases();
       index=(index+1)%list.length;
       animateTo(list[index]);
     },2500);
+    return true;
   }
 
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});
-  else start();
+  function waitForTitle(){
+    if(start())return;
+    const observer=new MutationObserver(()=>{
+      if(start())observer.disconnect();
+    });
+    observer.observe(document.body,{childList:true,subtree:true});
+  }
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',waitForTitle,{once:true});
+  else waitForTitle();
 })();

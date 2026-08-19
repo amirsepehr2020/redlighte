@@ -36,7 +36,7 @@ CONTEXT AND INTENT
 
 ANSWER QUALITY
 - Answer the actual question first.
-- Be concise by default, but give enough detail to solve the problem.
+- Be concise by default, but give enough detail to solve the request.
 - Use bullets and numbered steps when useful.
 - Use markdown naturally.
 - Use fenced code blocks for code and preserve exact syntax.
@@ -73,8 +73,8 @@ async function verifyPassword(password,stored){try{const [iterations,saltHex,has
 function hex(bytes){return[...bytes].map(x=>x.toString(16).padStart(2,'0')).join('')}
 function fromHex(hex){const a=new Uint8Array(hex.length/2);for(let i=0;i<a.length;i++)a[i]=parseInt(hex.slice(i*2,i*2+2),16);return a}
 function timingSafeEqual(a,b){if(a.length!==b.length)return false;let x=0;for(let i=0;i<a.length;i++)x|=a[i]^b[i];return x===0}
-async function makeCookie(request,env,user){const payload=toBase64(JSON.stringify({id:user.id,name:user.name,username:user.username,exp:Date.now()+604800000}));const sig=await sign(payload,env.GITHUB_TOKEN);const host=new URL(request.url).hostname;const domain=host==='redlighte.ir'||host==='www.redlighte.ir'?'; Domain=redlighte.ir':'';return`redlighte_session=${payload}.${sig}; Path=/;${domain} HttpOnly; Secure; SameSite=Lax; Max-Age=604800`}
-function clearCookie(request){const host=new URL(request.url).hostname;const domain=host==='redlighte.ir'||host==='www.redlighte.ir'?'; Domain=redlighte.ir':'';return`redlighte_session=; Path=/;${domain} HttpOnly; Secure; SameSite=Lax; Max-Age=0`}
+async function makeCookie(request,env,user){const payload=toBase64(JSON.stringify({id:user.id,name:user.name,username:user.username,exp:Date.now()+604800000}));const sig=await sign(payload,env.GITHUB_TOKEN);const host=new URL(request.url).hostname;const domain=host==='redlighte.ir'||host==='www.redlighte.ir'?'Domain=redlighte.ir; ':'';return`redlighte_session=${payload}.${sig}; Path=/; ${domain}HttpOnly; Secure; SameSite=Lax; Max-Age=604800`}
+function clearCookie(request){const host=new URL(request.url).hostname;const domain=host==='redlighte.ir'||host==='www.redlighte.ir'?'Domain=redlighte.ir; ':'';return`redlighte_session=; Path=/; ${domain}HttpOnly; Secure; SameSite=Lax; Max-Age=0`}
 async function readSession(request,env){const raw=request.headers.get('Cookie')?.match(/(?:^|;\s*)redlighte_session=([^;]+)/)?.[1];if(!raw)return null;try{const [payload,sig]=raw.split('.');if(!payload||!sig||!(await verify(payload,sig,env.GITHUB_TOKEN)))return null;const data=JSON.parse(fromBase64(payload));if(!data.exp||data.exp<Date.now())return null;return data}catch{return null}}
 async function sign(value,secret){const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(secret),'HMAC',false,['sign']);const sig=await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(value));return hex(new Uint8Array(sig))}
 async function verify(value,sig,secret){const expected=await sign(value,secret);return timingSafeEqual(new TextEncoder().encode(expected),new TextEncoder().encode(sig))}

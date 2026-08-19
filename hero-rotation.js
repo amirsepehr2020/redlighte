@@ -37,7 +37,8 @@
     title.classList.remove('hero-title-in');
     title.classList.add('hero-title-animated','hero-title-out');
     setTimeout(()=>{
-      title.textContent=text;
+      if(title.firstChild) title.firstChild.nodeValue=text;
+      else title.appendChild(document.createTextNode(text));
       title.classList.remove('hero-title-out');
       void title.offsetWidth;
       title.classList.add('hero-title-in');
@@ -52,7 +53,10 @@
     index=0;
     const list=getPhrases();
     const title=getTitle();
-    if(title&&!changing)title.textContent=list[0];
+    if(title&&!changing){
+      if(title.firstChild) title.firstChild.nodeValue=list[0];
+      else title.appendChild(document.createTextNode(list[0]));
+    }
     return true;
   }
 

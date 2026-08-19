@@ -1,0 +1,14 @@
+/* Share modal — visual styles only */
+.share-preview{margin:0;padding:15px 16px;max-height:330px;overflow:auto;border:1px solid var(--line);border-radius:16px;background:linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,48,69,.025));color:var(--text);font-size:13px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere;box-shadow:inset 0 1px 0 rgba(255,255,255,.035)}
+.share-preview::-webkit-scrollbar{width:6px}.share-preview::-webkit-scrollbar-track{background:transparent}.share-preview::-webkit-scrollbar-thumb{background:var(--line2);border-radius:999px}
+.share-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:14px}
+.share-actions .panel-action{width:100%;justify-content:center;margin:0;min-height:46px;padding:11px 14px;border-radius:13px;font-size:12px;font-weight:700;transition:transform .2s var(--ease),background .2s,border-color .2s,box-shadow .2s}
+.share-actions .panel-action:hover{transform:translateY(-1px);border-color:var(--line2);background:var(--surface3);box-shadow:0 8px 24px rgba(0,0,0,.16)}
+.share-actions .panel-action:active{transform:translateY(0) scale(.98)}
+.share-copy{color:var(--text)}
+.share-primary{background:var(--red)!important;border-color:var(--red)!important;color:#fff!important;box-shadow:0 8px 24px rgba(255,48,69,.16)}
+.share-primary:hover{background:var(--red2)!important;border-color:var(--red2)!important;box-shadow:0 10px 30px rgba(255,48,69,.22)!important}
+.share-primary svg{width:18px;height:18px}
+.share-chat-button svg{width:20px;height:20px}
+@media(max-width:520px){.modal-card{width:100%;padding:16px;border-radius:20px}.modal-header{margin-bottom:16px}.share-preview{max-height:45svh;padding:13px 14px;font-size:12px}.share-actions{grid-template-columns:1fr;gap:8px}.share-actions .panel-action{min-height:45px}}
+html.light .share-preview{background:linear-gradient(145deg,rgba(0,0,0,.025),rgba(255,48,69,.018));box-shadow:inset 0 1px 0 rgba(255,255,255,.8)}

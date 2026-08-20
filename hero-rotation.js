@@ -12,12 +12,13 @@
 
   const style=document.createElement('style');
   style.textContent=`
-    .welcome-content h1.hero-title-animated{will-change:opacity,transform;transform-origin:center}
-    .welcome-content h1.hero-title-animated.hero-title-out{animation:heroTitleOut .34s cubic-bezier(.22,1,.36,1) both}
-    .welcome-content h1.hero-title-animated.hero-title-in{animation:heroTitleIn .55s cubic-bezier(.22,1,.36,1) both}
-    @keyframes heroTitleOut{from{opacity:1;transform:translateY(0) scale(1)}to{opacity:0;transform:translateY(-18px) scale(.985);filter:blur(4px)}}
+    .welcome-content h1.hero-title-animated{position:relative;color:transparent!important;min-height:1.2em;will-change:opacity,transform;transform-origin:center}
+    .welcome-content h1.hero-title-animated::after{content:attr(data-hero-text);position:absolute;inset:0;display:block;color:var(--text-primary,#fff);font:inherit;line-height:inherit;letter-spacing:inherit;text-align:inherit;white-space:normal;pointer-events:none;will-change:opacity,transform,filter}
+    .welcome-content h1.hero-title-animated.hero-title-out::after{animation:heroTitleOut .34s cubic-bezier(.22,1,.36,1) both}
+    .welcome-content h1.hero-title-animated.hero-title-in::after{animation:heroTitleIn .55s cubic-bezier(.22,1,.36,1) both}
+    @keyframes heroTitleOut{from{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}to{opacity:0;transform:translateY(-18px) scale(.985);filter:blur(4px)}}
     @keyframes heroTitleIn{from{opacity:0;transform:translateY(22px) scale(.985);filter:blur(4px)}to{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}}
-    @media(prefers-reduced-motion:reduce){.welcome-content h1.hero-title-animated.hero-title-out,.welcome-content h1.hero-title-animated.hero-title-in{animation:none!important}}
+    @media(prefers-reduced-motion:reduce){.welcome-content h1.hero-title-animated.hero-title-out::after,.welcome-content h1.hero-title-animated.hero-title-in::after{animation:none!important}}
   `;
   document.head.appendChild(style);
 
@@ -30,6 +31,8 @@
   const getTitle=()=>document.querySelector('#welcomeView h1');
   const getPhrases=()=>phrases[localStorage.getItem('redlighte_language')||'en']||phrases.en;
 
+  function setVisibleText(title,text){title.setAttribute('data-hero-text',text)}
+
   function animateTo(text){
     const title=getTitle();
     if(!title||changing)return;
@@ -37,8 +40,7 @@
     title.classList.remove('hero-title-in');
     title.classList.add('hero-title-animated','hero-title-out');
     setTimeout(()=>{
-      if(title.firstChild) title.firstChild.nodeValue=text;
-      else title.appendChild(document.createTextNode(text));
+      setVisibleText(title,text);
       title.classList.remove('hero-title-out');
       void title.offsetWidth;
       title.classList.add('hero-title-in');
@@ -51,12 +53,8 @@
     if(next===currentLang)return false;
     currentLang=next;
     index=0;
-    const list=getPhrases();
     const title=getTitle();
-    if(title&&!changing){
-      if(title.firstChild) title.firstChild.nodeValue=list[0];
-      else title.appendChild(document.createTextNode(list[0]));
-    }
+    if(title&&!changing)setVisibleText(title,getPhrases()[0]);
     return true;
   }
 
@@ -70,9 +68,9 @@
     const initialText=title.textContent.trim();
     const initialIndex=initial.indexOf(initialText);
     index=initialIndex>=0?initialIndex:0;
+    setVisibleText(title,initial[index]);
     timer=setInterval(()=>{
-      const languageChanged=syncLanguage();
-      if(languageChanged)return;
+      if(syncLanguage())return;
       const list=getPhrases();
       index=(index+1)%list.length;
       animateTo(list[index]);

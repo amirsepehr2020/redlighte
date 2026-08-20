@@ -1,0 +1,89 @@
+html.iran-theme {
+  --red: #da0000 !important;
+  --red2: #239f40 !important;
+  --redSoft: rgba(218, 0, 0, .12) !important;
+  --iran-gradient: linear-gradient(90deg, #da0000 0 33.333%, #fff 33.333% 66.666%, #239f40 66.666% 100%);
+}
+
+html.iran-theme .brand-mark,
+html.iran-theme .hero-mark,
+html.iran-theme .send-button {
+  background: var(--iran-gradient) !important;
+}
+
+html.iran-theme .send-button {
+  color: #111 !important;
+  box-shadow: 0 8px 25px rgba(218, 0, 0, .16), 0 0 0 1px rgba(35, 159, 64, .18) !important;
+}
+
+html.iran-theme .send-button:not(:disabled):hover {
+  background: var(--iran-gradient) !important;
+  box-shadow: 0 10px 28px rgba(35, 159, 64, .2) !important;
+}
+
+html.iran-theme .ambient-glow {
+  background: conic-gradient(from 90deg at 50% 50%, rgba(218, 0, 0, .11), rgba(255, 255, 255, .08), rgba(35, 159, 64, .11), rgba(218, 0, 0, .11)) !important;
+}
+
+html.iran-theme .composer:focus-within {
+  border-color: #fff !important;
+  box-shadow: 0 0 0 2px #da0000, 0 0 0 4px rgba(255, 255, 255, .75), 0 0 0 6px #239f40, 0 20px 70px rgba(0, 0, 0, .35) !important;
+}
+
+html.iran-theme .eyebrow,
+html.iran-theme .message-label,
+html.iran-theme .message-body a,
+html.iran-theme .appearance-check,
+html.iran-theme .appearance-icon,
+html.iran-theme .nav-icon,
+html.iran-theme .theme-icon,
+html.iran-theme .message-edit-save {
+  color: transparent !important;
+  background-image: var(--iran-gradient) !important;
+  background-size: 100% 100% !important;
+  background-clip: text !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+html.iran-theme .appearance-icon,
+html.iran-theme .nav-icon,
+html.iran-theme .theme-icon {
+  background-image: var(--iran-gradient) !important;
+  background-clip: border-box !important;
+  -webkit-background-clip: border-box !important;
+  -webkit-text-fill-color: initial !important;
+  color: #111 !important;
+}
+
+html.iran-theme .appearance-mode.active,
+html.iran-theme .accent-choice.active,
+html.iran-theme .theme-action:hover > .theme-value {
+  border-color: #239f40 !important;
+  box-shadow: 0 0 0 3px rgba(218, 0, 0, .12), 0 0 0 5px rgba(255, 255, 255, .18) !important;
+}
+
+html.iran-theme .iran-accent-choice {
+  border: 1px solid transparent !important;
+  background: linear-gradient(var(--surface2), var(--surface2)) padding-box, var(--iran-gradient) border-box !important;
+}
+
+html.iran-theme .iran-accent-choice > span {
+  background: var(--iran-gradient) !important;
+}
+
+html.iran-theme .iran-accent-choice.active {
+  background: linear-gradient(var(--surface2), var(--surface2)) padding-box, var(--iran-gradient) border-box !important;
+  box-shadow: 0 0 0 3px rgba(218, 0, 0, .12) !important;
+}
+
+html.iran-theme .history-delete:hover {
+  color: #239f40 !important;
+  border-color: #da0000 !important;
+  background: rgba(218, 0, 0, .08) !important;
+}
+
+html.iran-theme button:focus-visible,
+html.iran-theme textarea:focus-visible {
+  outline-color: #239f40 !important;
+}

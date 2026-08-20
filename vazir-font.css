@@ -1,0 +1,9 @@
+@import url('https://cdn.jsdelivr.net/gh/rastikerdar/vazir-font/dist/font-face.css');
+
+html[lang="fa"] body,
+html[lang="fa"] button,
+html[lang="fa"] textarea,
+html[lang="fa"] input,
+html[lang="fa"] select {
+  font-family: "Vazir", Tahoma, sans-serif;
+}

@@ -2,7 +2,7 @@ html.iran-theme {
   --red: #da0000 !important;
   --red2: #008f39 !important;
   --redSoft: rgba(218, 0, 0, .12) !important;
-  --iran-gradient: linear-gradient(180deg, #da0000 0 33.333%, #fff 33.333% 66.666%, #008f39 66.666% 100%);
+  --iran-gradient: linear-gradient(180deg, #008f39 0 33.333%, #fff 33.333% 66.666%, #da0000 66.666% 100%);
 }
 
 html.iran-theme .brand-mark,
@@ -27,7 +27,7 @@ html.iran-theme .ambient-glow {
 
 html.iran-theme .composer:focus-within {
   border-color: #fff !important;
-  box-shadow: 0 0 0 2px #da0000, 0 0 0 4px rgba(255, 255, 255, .75), 0 0 0 6px #008f39, 0 20px 70px rgba(0, 0, 0, .35) !important;
+  box-shadow: 0 0 0 2px #008f39, 0 0 0 4px rgba(255, 255, 255, .75), 0 0 0 6px #da0000, 0 20px 70px rgba(0, 0, 0, .35) !important;
 }
 
 html.iran-theme .eyebrow,

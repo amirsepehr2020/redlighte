@@ -28,4 +28,18 @@
     <xhtml:link rel="alternate" hreflang="fa" href="https://redlighte.ir/fa/about/" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://redlighte.ir/about/" />
   </url>
+  <url>
+    <loc>https://redlighte.ir/app/</loc>
+    <lastmod>2026-08-21</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://redlighte.ir/app/" />
+    <xhtml:link rel="alternate" hreflang="fa" href="https://redlighte.ir/fa/app/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://redlighte.ir/app/" />
+  </url>
+  <url>
+    <loc>https://redlighte.ir/fa/app/</loc>
+    <lastmod>2026-08-21</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://redlighte.ir/app/" />
+    <xhtml:link rel="alternate" hreflang="fa" href="https://redlighte.ir/fa/app/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://redlighte.ir/app/" />
+  </url>
 </urlset>

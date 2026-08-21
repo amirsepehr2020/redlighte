@@ -57,8 +57,7 @@
   }
 
   const observer = new MutationObserver(() => {
-    addIranChoice();
-    updateIranChoice();
+    syncTheme();
   });
 
   observer.observe(document.body, { childList: true, subtree: true });

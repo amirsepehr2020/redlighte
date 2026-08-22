@@ -7,12 +7,8 @@ const MEMORY_TYPES = new Set(['profile','preference','skill','goal','project','c
 export async function getMemory(env, username) {
   const file = await githubFile(env, `users/${username}/memory.json`);
   if (!file) return { file: null, data: { version: MEMORY_VERSION, enabled: true, memories: [] } };
-  try {
-    const parsed = JSON.parse(file.content);
-    return { file, data: normalizeMemory(parsed) };
-  } catch {
-    return { file, data: { version: MEMORY_VERSION, enabled: true, memories: [] } };
-  }
+  try { return { file, data: normalizeMemory(JSON.parse(file.content)) }; }
+  catch { return { file, data: { version: MEMORY_VERSION, enabled: true, memories: [] } }; }
 }
 
 export async function saveMemory(env, username, data, file, message = 'Update user memory') {
@@ -26,12 +22,11 @@ export function retrieveMemories(data, query, limit = MEMORY_CONTEXT_MAX) {
   if (!data?.enabled || !Array.isArray(data.memories)) return [];
   const q = tokenize(query);
   if (!q.length) return [];
-  return data.memories
-    .filter(m => m.status === 'active')
+  return data.memories.filter(m => m.status === 'active')
     .map(m => ({ memory: m, score: retrievalScore(m, q) }))
     .filter(x => x.score >= 0.08)
     .sort((a,b) => b.score - a.score)
-    .slice(0, limit)
+    .slice(0, Math.min(limit, MEMORY_CONTEXT_MAX))
     .map(x => ({ ...x.memory, retrievalScore: Number(x.score.toFixed(4)), lastUsedAt: new Date().toISOString() }));
 }
 
@@ -40,14 +35,14 @@ export function buildMemoryContext(memories) {
   return `[RELEVANT USER MEMORY]\n${memories.map(m => `- ${m.content}`).join('\n')}\n[END USER MEMORY]`;
 }
 
-export async function extractAndMergeMemory(env, username, userMessage, recentMessages = []) {
+export async function extractAndMergeMemory(env, username, userMessage, recentMessages = [], conversationId = null) {
   if (!env.AI || !username || !userMessage || userMessage.length < 8) return null;
   if (!looksLikeMemoryCandidate(userMessage)) return null;
   const { file, data } = await getMemory(env, username);
   if (!data.enabled) return null;
 
-  const context = data.memories.slice(0, 40).map(m => ({ id: m.id, type: m.type, content: m.content })).slice(0, 40);
-  const prompt = `You are Redlighte Memory Extractor. Extract only durable, user-specific information from the user's latest message that would improve future conversations. Do not store temporary events, one-off requests, secrets, passwords, API keys, tokens, exact IP addresses, device identifiers, medical information, financial information, political/religious identity, sexual information, or other highly sensitive personal data. Do not infer facts that the user did not state. If nothing should be remembered, return {"remember":false}. If an existing memory is contradicted, return an update for that memory.\n\nAllowed types: profile, preference, skill, goal, project, communication, fact.\n\nExisting memories:\n${JSON.stringify(context)}\n\nLatest user message:\n${userMessage}\n\nRecent conversation:\n${JSON.stringify(recentMessages.slice(-4))}\n\nReturn JSON only in this shape:\n{"remember":true,"action":"create|update","existingId":null,"type":"preference","content":"short durable statement","confidence":0.0,"importance":0.0}`;
+  const context = data.memories.slice(0, 40).map(m => ({ id: m.id, type: m.type, content: m.content }));
+  const prompt = `You are Redlighte Memory Extractor. Extract only durable, user-specific information from the user's latest message that would improve future conversations. Do not store temporary events, one-off requests, secrets, passwords, API keys, tokens, exact IP addresses, device identifiers, medical information, financial information, political/religious identity, sexual information, or other highly sensitive personal data. Do not infer facts that the user did not state. If nothing should be remembered, return {"remember":false}. If an existing memory is contradicted, return an update for that memory.\n\nAllowed types: profile, preference, skill, goal, project, communication, fact.\n\nExisting memories:\n${JSON.stringify(context)}\n\nLatest user message:\n${userMessage}\n\nRecent conversation:\n${JSON.stringify(recentMessages.slice(-4))}\n\nReturn JSON only:\n{"remember":true,"action":"create|update","existingId":null,"type":"preference","content":"short durable statement","confidence":0.0,"importance":0.0}`;
 
   try {
     const result = await env.AI.run(MEMORY_MODEL, { messages: [{ role: 'system', content: prompt }], max_tokens: 300, temperature: 0.1 });
@@ -55,14 +50,15 @@ export async function extractAndMergeMemory(env, username, userMessage, recentMe
     const candidate = parseJsonObject(raw);
     if (!candidate?.remember || typeof candidate.content !== 'string') return null;
     const content = candidate.content.trim().slice(0, 500);
-    if (!content) return null;
+    if (!content || isSensitiveCandidate(content)) return null;
+
     const type = MEMORY_TYPES.has(candidate.type) ? candidate.type : 'fact';
     const confidence = clamp(Number(candidate.confidence), 0.5, 1);
     const importance = clamp(Number(candidate.importance), 0.5, 1);
-    if (isSensitiveCandidate(content)) return null;
-
     const now = new Date().toISOString();
     const existing = candidate.existingId ? data.memories.find(m => m.id === candidate.existingId) : findSimilar(data.memories, content);
+    const sourcePatch = conversationId ? { chatId: String(conversationId).slice(0, 128) } : { chat: true };
+
     if (existing) {
       existing.content = content;
       existing.type = type;
@@ -70,9 +66,9 @@ export async function extractAndMergeMemory(env, username, userMessage, recentMe
       existing.importance = Math.max(existing.importance || 0, importance);
       existing.status = 'active';
       existing.updatedAt = now;
-      existing.source = { ...existing.source, lastChat: true };
+      existing.source = { ...existing.source, ...sourcePatch };
     } else {
-      data.memories.unshift({ id: crypto.randomUUID(), type, content, confidence, importance, status: 'active', source: { chat: true }, createdAt: now, updatedAt: now, lastUsedAt: null });
+      data.memories.unshift({ id: crypto.randomUUID(), type, content, confidence, importance, status: 'active', source: sourcePatch, createdAt: now, updatedAt: now, lastUsedAt: null });
     }
     data.memories = dedupeAndPrune(data.memories);
     await saveMemory(env, username, data, file, existing ? 'Update user memory' : 'Create user memory');
@@ -88,6 +84,17 @@ export async function addManualMemory(env, username, input) {
   const content = String(input?.content || '').trim().slice(0, 500);
   if (!content) throw new Error('Memory content is required.');
   if (isSensitiveCandidate(content)) throw new Error('This type of information cannot be stored in Memory.');
+  const existing = findSimilar(data.memories, content);
+  if (existing) {
+    existing.content = content;
+    existing.type = MEMORY_TYPES.has(input?.type) ? input.type : existing.type;
+    existing.confidence = 1;
+    existing.importance = 1;
+    existing.status = 'active';
+    existing.updatedAt = new Date().toISOString();
+    await saveMemory(env, username, data, file, 'Update memory');
+    return existing;
+  }
   const now = new Date().toISOString();
   const memory = { id: crypto.randomUUID(), type: MEMORY_TYPES.has(input?.type) ? input.type : 'fact', content, confidence: 1, importance: 1, status: 'active', source: { manual: true }, createdAt: now, updatedAt: now, lastUsedAt: null };
   data.memories.unshift(memory);
@@ -100,7 +107,11 @@ export async function updateManualMemory(env, username, id, patch) {
   const { file, data } = await getMemory(env, username);
   const memory = data.memories.find(m => m.id === id);
   if (!memory) return null;
-  if (typeof patch?.content === 'string' && patch.content.trim()) memory.content = patch.content.trim().slice(0, 500);
+  if (typeof patch?.content === 'string' && patch.content.trim()) {
+    const content = patch.content.trim().slice(0, 500);
+    if (isSensitiveCandidate(content)) throw new Error('This type of information cannot be stored in Memory.');
+    memory.content = content;
+  }
   if (MEMORY_TYPES.has(patch?.type)) memory.type = patch.type;
   memory.updatedAt = new Date().toISOString();
   await saveMemory(env, username, data, file, 'Update memory');
@@ -166,7 +177,7 @@ function looksLikeMemoryCandidate(text) {
 }
 
 function isSensitiveCandidate(text) {
-  return /(password|passcode|api[_ -]?key|token|secret|کلمه عبور|رمز عبور|رمز ورود|شماره کارت|cvv|دبیت|credit card|ip address|آدرس آی ?پی)/i.test(text);
+  return /(password|passcode|api[_ -]?key|token|secret|کلمه عبور|رمز عبور|رمز ورود|شماره کارت|cvv|debit|credit card|ip address|آدرس آی ?پی|medical|diagnos|درمان|بیماری|دارو|مذهب|دین|سیاسی|سیاست|sexual|جنسی)/i.test(text);
 }
 
 function findSimilar(memories, content) {
@@ -180,13 +191,11 @@ function findSimilar(memories, content) {
 }
 
 function dedupeAndPrune(memories) {
-  const out = [];
-  const seen = new Set();
+  const out = [], seen = new Set();
   for (const m of memories.sort((a,b) => (b.importance||0) - (a.importance||0))) {
     const key = tokenize(m.content).sort().join('|');
     if (!key || seen.has(key)) continue;
-    seen.add(key);
-    out.push(m);
+    seen.add(key); out.push(m);
   }
   return out.slice(0, MEMORY_MAX);
 }

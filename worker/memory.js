@@ -36,13 +36,19 @@ export function buildMemoryContext(memories) {
 }
 
 export async function extractAndMergeMemory(env, username, userMessage, recentMessages = [], conversationId = null) {
-  if (!env.AI || !username || !userMessage || userMessage.length < 8) return null;
+  if (!env.AI || !username || !userMessage || userMessage.length < 3) return null;
   if (!looksLikeMemoryCandidate(userMessage)) return null;
   const { file, data } = await getMemory(env, username);
   if (!data.enabled) return null;
 
+  const deterministic = detectExplicitMemory(userMessage);
+  if (deterministic) {
+    return persistCandidate(env, username, data, file, deterministic, conversationId);
+  }
+
+  if (userMessage.length < 8) return null;
   const context = data.memories.slice(0, 40).map(m => ({ id: m.id, type: m.type, content: m.content }));
-  const prompt = `You are Redlighte Memory Extractor. Extract only durable, user-specific information from the user's latest message that would improve future conversations. Do not store temporary events, one-off requests, secrets, passwords, API keys, tokens, exact IP addresses, device identifiers, medical information, financial information, political/religious identity, sexual information, or other highly sensitive personal data. Do not infer facts that the user did not state. If nothing should be remembered, return {"remember":false}. If an existing memory is contradicted, return an update for that memory.\n\nAllowed types: profile, preference, skill, goal, project, communication, fact.\n\nExisting memories:\n${JSON.stringify(context)}\n\nLatest user message:\n${userMessage}\n\nRecent conversation:\n${JSON.stringify(recentMessages.slice(-4))}\n\nReturn JSON only:\n{"remember":true,"action":"create|update","existingId":null,"type":"preference","content":"short durable statement","confidence":0.0,"importance":0.0}`;
+  const prompt = `You are Redlighte Memory Extractor. Extract only durable, user-specific information explicitly stated by the user in the latest message that would improve future conversations. Do not store temporary events, one-off requests, secrets, passwords, API keys, tokens, exact IP addresses, device identifiers, medical information, financial information, political/religious identity, sexual information, or other highly sensitive personal data. Do not infer facts that the user did not state. If nothing should be remembered, return {"remember":false}. If an existing memory is contradicted, return an update for that memory.\n\nAllowed types: profile, preference, skill, goal, project, communication, fact.\n\nExisting memories:\n${JSON.stringify(context)}\n\nLatest user message:\n${userMessage}\n\nRecent conversation:\n${JSON.stringify(recentMessages.slice(-4))}\n\nReturn JSON only:\n{"remember":true,"action":"create|update","existingId":null,"type":"preference","content":"short durable statement","confidence":0.0,"importance":0.0}`;
 
   try {
     const result = await env.AI.run(MEMORY_MODEL, { messages: [{ role: 'system', content: prompt }], max_tokens: 300, temperature: 0.1 });
@@ -51,32 +57,85 @@ export async function extractAndMergeMemory(env, username, userMessage, recentMe
     if (!candidate?.remember || typeof candidate.content !== 'string') return null;
     const content = candidate.content.trim().slice(0, 500);
     if (!content || isSensitiveCandidate(content)) return null;
-
     const type = MEMORY_TYPES.has(candidate.type) ? candidate.type : 'fact';
     const confidence = clamp(Number(candidate.confidence), 0.5, 1);
     const importance = clamp(Number(candidate.importance), 0.5, 1);
-    const now = new Date().toISOString();
-    const existing = candidate.existingId ? data.memories.find(m => m.id === candidate.existingId) : findSimilar(data.memories, content);
-    const sourcePatch = conversationId ? { chatId: String(conversationId).slice(0, 128) } : { chat: true };
-
-    if (existing) {
-      existing.content = content;
-      existing.type = type;
-      existing.confidence = Math.max(existing.confidence || 0, confidence);
-      existing.importance = Math.max(existing.importance || 0, importance);
-      existing.status = 'active';
-      existing.updatedAt = now;
-      existing.source = { ...existing.source, ...sourcePatch };
-    } else {
-      data.memories.unshift({ id: crypto.randomUUID(), type, content, confidence, importance, status: 'active', source: sourcePatch, createdAt: now, updatedAt: now, lastUsedAt: null });
-    }
-    data.memories = dedupeAndPrune(data.memories);
-    await saveMemory(env, username, data, file, existing ? 'Update user memory' : 'Create user memory');
-    return existing || data.memories[0];
+    return persistCandidate(env, username, data, file, { content, type, confidence, importance }, conversationId, candidate.existingId || null);
   } catch (error) {
     console.error('MEMORY_EXTRACTION_ERROR', error);
     return null;
   }
+}
+
+function detectExplicitMemory(text) {
+  const value = String(text || '').trim();
+  if (isSensitiveCandidate(value)) return null;
+
+  let m = value.match(/^(?:اسمم|اسم من|منو|من رو)\s*(?:این(?:ه|ه که)|:)?\s*([\p{L}][\p{L}\u200c .'-]{1,48})[.!؟]?$/u);
+  if (m) return { type: 'profile', content: `User's name is ${cleanCaptured(m[1])}.`, confidence: 1, importance: 1 };
+
+  m = value.match(/^(?:من|منم)\s+(?:دانش[‌ ]?آموز|دانشجو|برنامه[‌ ]?نویس|طراح|توسعه[‌ ]?دهنده)(?:\s+هستم|م)?[.!؟]?$/u);
+  if (m) return { type: 'profile', content: `User is ${cleanCaptured(m[0].replace(/^(?:من|منم)\s+/u,'').replace(/[.!؟]?$/u,'').trim())}.`, confidence: 1, importance: .9 };
+
+  m = value.match(/^(?:من\s+)?(?:عاشق|علاقه[‌ ]?مند به|علاقه دارم به|دوست دارم)\s+(.{2,120})[.!؟]?$/u);
+  if (m) return { type: 'preference', content: `User likes ${cleanCaptured(m[1])}.`, confidence: .96, importance: .82 };
+
+  m = value.match(/^(?:من\s+)?(?:ترجیح میدم|ترجیح می‌دم|ترجیح میدهم|ترجیح می‌دهم)\s+(.{2,160})[.!؟]?$/u);
+  if (m) return { type: 'preference', content: `User prefers ${cleanCaptured(m[1])}.`, confidence: .98, importance: .9 };
+
+  m = value.match(/^(?:از این به بعد|لطفاً از این به بعد)\s+(.{2,180})[.!؟]?$/u);
+  if (m) return { type: 'communication', content: `User wants ${cleanCaptured(m[1])} from now on.`, confidence: .98, importance: .92 };
+
+  m = value.match(/^(?:من\s+)?(?:بلدم|مسلطم به|با)\s+(.{2,120})(?:\s+کار می‌کنم|\s+کار میکنم)?[.!؟]?$/u);
+  if (m && /(python|javascript|typescript|html|css|java|kotlin|swift|php|sql|react|vue|node|برنامه|کدنویسی|فتوشاپ|پریمیر)/iu.test(m[1])) {
+    return { type: 'skill', content: `User has experience with ${cleanCaptured(m[1])}.`, confidence: .96, importance: .82 };
+  }
+
+  m = value.match(/^(?:هدفم(?: اینه که| اینه)?|هدف من(?: اینه که| اینه)?)\s+(.{3,180})[.!؟]?$/u);
+  if (m) return { type: 'goal', content: `User's goal is ${cleanCaptured(m[1])}.`, confidence: .97, importance: .92 };
+
+  m = value.match(/^(?:پروژه[‌ ]?م|پروژه من)\s*(?:این(?:ه|ه که)|:)?\s*(.{3,180})[.!؟]?$/u);
+  if (m) return { type: 'project', content: `User's project is ${cleanCaptured(m[1])}.`, confidence: .97, importance: .9 };
+
+  const english = value.match(/^my\s+(name|goal|project|favorite|preference)\s+(?:is|are)\s+(.{2,160})[.!]?$/i);
+  if (english) {
+    const map = { name:'profile', goal:'goal', project:'project', favorite:'preference', preference:'preference' };
+    return { type: map[english[1].toLowerCase()] || 'fact', content: `User's ${english[1].toLowerCase()} is ${cleanCaptured(english[2])}.`, confidence: .98, importance: .9 };
+  }
+  return null;
+}
+
+function cleanCaptured(value) { return String(value || '').trim().replace(/[.!؟]+$/u,'').slice(0, 220); }
+
+async function persistCandidate(env, username, data, file, candidate, conversationId = null, existingId = null) {
+  const content = String(candidate.content || '').trim().slice(0, 500);
+  if (!content || isSensitiveCandidate(content)) return null;
+  const type = MEMORY_TYPES.has(candidate.type) ? candidate.type : 'fact';
+  const confidence = clamp(Number(candidate.confidence), 0.5, 1);
+  const importance = clamp(Number(candidate.importance), 0.5, 1);
+  const now = new Date().toISOString();
+  const existing = existingId ? data.memories.find(m => m.id === existingId) : findSimilar(data.memories, content);
+  const sourcePatch = conversationId ? { chatId: String(conversationId).slice(0, 128) } : { chat: true };
+  let memory;
+  let action;
+  if (existing) {
+    existing.content = content;
+    existing.type = type;
+    existing.confidence = Math.max(existing.confidence || 0, confidence);
+    existing.importance = Math.max(existing.importance || 0, importance);
+    existing.status = 'active';
+    existing.updatedAt = now;
+    existing.source = { ...existing.source, ...sourcePatch };
+    memory = existing;
+    action = 'updated';
+  } else {
+    memory = { id: crypto.randomUUID(), type, content, confidence, importance, status: 'active', source: sourcePatch, createdAt: now, updatedAt: now, lastUsedAt: null };
+    data.memories.unshift(memory);
+    action = 'created';
+  }
+  data.memories = dedupeAndPrune(data.memories);
+  await saveMemory(env, username, data, file, action === 'updated' ? 'Update user memory' : 'Create user memory');
+  return { memory, action };
 }
 
 export async function addManualMemory(env, username, input) {
@@ -173,7 +232,7 @@ function tokenize(value) {
 }
 
 function looksLikeMemoryCandidate(text) {
-  return /(من |منم |من رو |منو |من به |من از |علاقه دارم|دوست دارم|ترجیح میدم|ترجیح می‌دم|از این به بعد|یادت باشه|اسمم|کارم|پروژه[‌ ]?م|هدفم|بلدم|میدونم|می‌دونم|I am |I’m |I like |I prefer |I work |my project|remember that)/i.test(text);
+  return /(من |منم |من رو |منو |من به |من از |علاقه دارم|دوست دارم|ترجیح میدم|ترجیح می‌دم|از این به بعد|یادت باشه|اسمم|اسم من|کارم|پروژه[‌ ]?م|هدفم|بلدم|میدونم|می‌دونم|my name|my goal|my project|my preference|I am |I’m |I like |I prefer |I work |remember that)/i.test(text);
 }
 
 function isSensitiveCandidate(text) {

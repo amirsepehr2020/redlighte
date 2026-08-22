@@ -12,11 +12,20 @@ export default {
         const marker = /\n\n🧠\s+(?:Saved to Memory|Memory updated)\s+—\s+(.+)$/s;
         const match = payload.message.match(marker);
         if (match) {
-          const title = payload.memory.action === 'updated' ? 'MEMORY UPDATED' : 'SAVED TO MEMORY';
+          const updated = payload.memory.action === 'updated';
+          const title = updated ? 'MEMORY UPDATED' : 'SAVED TO MEMORY';
           const type = String(payload.memory.type || 'memory').toUpperCase();
-          const content = match[1].trim();
-          payload.message = payload.message.replace(marker,
-`\n\n╭────────────────────────────────────╮\n│  🧠  ${title.padEnd(29, ' ')}│\n│  ${type.padEnd(32, ' ')}│\n│  ✦ ${content.slice(0, 28).padEnd(28, ' ')} │\n╰────────────────────────────────────╯`);
+          const content = match[1].trim().replace(/[\r\n]+/g, ' ');
+          const compact = content.length > 140 ? `${content.slice(0, 137)}…` : content;
+          const notice = updated
+            ? `✦  MEMORY UPDATED\n   ${type}\n   ${compact}`
+            : `✦  SAVED TO MEMORY\n   ${type}\n   ${compact}`;
+          payload.message = payload.message.replace(marker, `\n\n${notice}`);
+          payload.memory.notification = {
+            title,
+            type,
+            content: compact
+          };
         }
       }
 

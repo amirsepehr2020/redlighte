@@ -1,0 +1,229 @@
+const MEMORY_VERSION = 1;
+const MEMORY_MAX = 200;
+const MEMORY_CONTEXT_MAX = 8;
+const MEMORY_MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
+const MEMORY_TYPES = new Set(['profile','preference','skill','goal','project','communication','fact']);
+
+export async function getMemory(env, username) {
+  const file = await githubFile(env, `users/${username}/memory.json`);
+  if (!file) return { file: null, data: { version: MEMORY_VERSION, enabled: true, memories: [] } };
+  try {
+    const parsed = JSON.parse(file.content);
+    return { file, data: normalizeMemory(parsed) };
+  } catch {
+    return { file, data: { version: MEMORY_VERSION, enabled: true, memories: [] } };
+  }
+}
+
+export async function saveMemory(env, username, data, file, message = 'Update user memory') {
+  const clean = normalizeMemory(data);
+  clean.memories = clean.memories.slice(0, MEMORY_MAX);
+  await githubWrite(env, `users/${username}/memory.json`, clean, file?.sha || null, message);
+  return clean;
+}
+
+export function retrieveMemories(data, query, limit = MEMORY_CONTEXT_MAX) {
+  if (!data?.enabled || !Array.isArray(data.memories)) return [];
+  const q = tokenize(query);
+  if (!q.length) return [];
+  return data.memories
+    .filter(m => m.status === 'active')
+    .map(m => ({ memory: m, score: retrievalScore(m, q) }))
+    .filter(x => x.score >= 0.08)
+    .sort((a,b) => b.score - a.score)
+    .slice(0, limit)
+    .map(x => ({ ...x.memory, retrievalScore: Number(x.score.toFixed(4)), lastUsedAt: new Date().toISOString() }));
+}
+
+export function buildMemoryContext(memories) {
+  if (!memories?.length) return '';
+  return `[RELEVANT USER MEMORY]\n${memories.map(m => `- ${m.content}`).join('\n')}\n[END USER MEMORY]`;
+}
+
+export async function extractAndMergeMemory(env, username, userMessage, recentMessages = []) {
+  if (!env.AI || !username || !userMessage || userMessage.length < 8) return null;
+  if (!looksLikeMemoryCandidate(userMessage)) return null;
+  const { file, data } = await getMemory(env, username);
+  if (!data.enabled) return null;
+
+  const context = data.memories.slice(0, 40).map(m => ({ id: m.id, type: m.type, content: m.content })).slice(0, 40);
+  const prompt = `You are Redlighte Memory Extractor. Extract only durable, user-specific information from the user's latest message that would improve future conversations. Do not store temporary events, one-off requests, secrets, passwords, API keys, tokens, exact IP addresses, device identifiers, medical information, financial information, political/religious identity, sexual information, or other highly sensitive personal data. Do not infer facts that the user did not state. If nothing should be remembered, return {"remember":false}. If an existing memory is contradicted, return an update for that memory.\n\nAllowed types: profile, preference, skill, goal, project, communication, fact.\n\nExisting memories:\n${JSON.stringify(context)}\n\nLatest user message:\n${userMessage}\n\nRecent conversation:\n${JSON.stringify(recentMessages.slice(-4))}\n\nReturn JSON only in this shape:\n{"remember":true,"action":"create|update","existingId":null,"type":"preference","content":"short durable statement","confidence":0.0,"importance":0.0}`;
+
+  try {
+    const result = await env.AI.run(MEMORY_MODEL, { messages: [{ role: 'system', content: prompt }], max_tokens: 300, temperature: 0.1 });
+    const raw = result?.response || result?.result?.response || '';
+    const candidate = parseJsonObject(raw);
+    if (!candidate?.remember || typeof candidate.content !== 'string') return null;
+    const content = candidate.content.trim().slice(0, 500);
+    if (!content) return null;
+    const type = MEMORY_TYPES.has(candidate.type) ? candidate.type : 'fact';
+    const confidence = clamp(Number(candidate.confidence), 0.5, 1);
+    const importance = clamp(Number(candidate.importance), 0.5, 1);
+    if (isSensitiveCandidate(content)) return null;
+
+    const now = new Date().toISOString();
+    const existing = candidate.existingId ? data.memories.find(m => m.id === candidate.existingId) : findSimilar(data.memories, content);
+    if (existing) {
+      existing.content = content;
+      existing.type = type;
+      existing.confidence = Math.max(existing.confidence || 0, confidence);
+      existing.importance = Math.max(existing.importance || 0, importance);
+      existing.status = 'active';
+      existing.updatedAt = now;
+      existing.source = { ...existing.source, lastChat: true };
+    } else {
+      data.memories.unshift({ id: crypto.randomUUID(), type, content, confidence, importance, status: 'active', source: { chat: true }, createdAt: now, updatedAt: now, lastUsedAt: null });
+    }
+    data.memories = dedupeAndPrune(data.memories);
+    await saveMemory(env, username, data, file, existing ? 'Update user memory' : 'Create user memory');
+    return existing || data.memories[0];
+  } catch (error) {
+    console.error('MEMORY_EXTRACTION_ERROR', error);
+    return null;
+  }
+}
+
+export async function addManualMemory(env, username, input) {
+  const { file, data } = await getMemory(env, username);
+  const content = String(input?.content || '').trim().slice(0, 500);
+  if (!content) throw new Error('Memory content is required.');
+  if (isSensitiveCandidate(content)) throw new Error('This type of information cannot be stored in Memory.');
+  const now = new Date().toISOString();
+  const memory = { id: crypto.randomUUID(), type: MEMORY_TYPES.has(input?.type) ? input.type : 'fact', content, confidence: 1, importance: 1, status: 'active', source: { manual: true }, createdAt: now, updatedAt: now, lastUsedAt: null };
+  data.memories.unshift(memory);
+  data.memories = dedupeAndPrune(data.memories);
+  await saveMemory(env, username, data, file, 'Add memory');
+  return memory;
+}
+
+export async function updateManualMemory(env, username, id, patch) {
+  const { file, data } = await getMemory(env, username);
+  const memory = data.memories.find(m => m.id === id);
+  if (!memory) return null;
+  if (typeof patch?.content === 'string' && patch.content.trim()) memory.content = patch.content.trim().slice(0, 500);
+  if (MEMORY_TYPES.has(patch?.type)) memory.type = patch.type;
+  memory.updatedAt = new Date().toISOString();
+  await saveMemory(env, username, data, file, 'Update memory');
+  return memory;
+}
+
+export async function deleteMemory(env, username, id) {
+  const { file, data } = await getMemory(env, username);
+  const before = data.memories.length;
+  data.memories = data.memories.filter(m => m.id !== id);
+  if (data.memories.length === before) return false;
+  await saveMemory(env, username, data, file, 'Delete memory');
+  return true;
+}
+
+export async function clearMemories(env, username) {
+  const { file, data } = await getMemory(env, username);
+  data.memories = [];
+  await saveMemory(env, username, data, file, 'Clear all memories');
+  return data;
+}
+
+export async function setMemoryEnabled(env, username, enabled) {
+  const { file, data } = await getMemory(env, username);
+  data.enabled = Boolean(enabled);
+  await saveMemory(env, username, data, file, 'Update memory settings');
+  return data;
+}
+
+function normalizeMemory(value) {
+  const memories = Array.isArray(value?.memories) ? value.memories.filter(Boolean).map(m => ({
+    id: typeof m.id === 'string' ? m.id : crypto.randomUUID(),
+    type: MEMORY_TYPES.has(m.type) ? m.type : 'fact',
+    content: String(m.content || '').trim().slice(0, 500),
+    confidence: clamp(Number(m.confidence), 0, 1),
+    importance: clamp(Number(m.importance), 0, 1),
+    status: m.status === 'archived' ? 'archived' : 'active',
+    source: m.source || {},
+    createdAt: m.createdAt || new Date().toISOString(),
+    updatedAt: m.updatedAt || new Date().toISOString(),
+    lastUsedAt: m.lastUsedAt || null
+  })).filter(m => m.content) : [];
+  return { version: MEMORY_VERSION, enabled: value?.enabled !== false, memories };
+}
+
+function retrievalScore(memory, queryTokens) {
+  const tokens = tokenize(`${memory.content} ${memory.type}`);
+  if (!tokens.length) return 0;
+  const overlap = queryTokens.reduce((n, t) => n + (tokens.includes(t) ? 1 : 0), 0) / queryTokens.length;
+  const importance = Number(memory.importance) || 0;
+  const confidence = Number(memory.confidence) || 0;
+  const ageDays = Math.max(0, (Date.now() - Date.parse(memory.updatedAt || memory.createdAt)) / 86400000);
+  const recency = 1 / (1 + ageDays / 30);
+  return overlap * 0.55 + importance * 0.2 + confidence * 0.2 + recency * 0.05;
+}
+
+function tokenize(value) {
+  return String(value || '').toLowerCase().replace(/[\u200c]/g, ' ').replace(/[^\p{L}\p{N}_+#.-]+/gu, ' ').split(/\s+/).filter(x => x.length > 1).slice(0, 80);
+}
+
+function looksLikeMemoryCandidate(text) {
+  return /(من |منم |من رو |منو |من به |من از |علاقه دارم|دوست دارم|ترجیح میدم|ترجیح می‌دم|از این به بعد|یادت باشه|اسمم|کارم|پروژه[‌ ]?م|هدفم|بلدم|میدونم|می‌دونم|I am |I’m |I like |I prefer |I work |my project|remember that)/i.test(text);
+}
+
+function isSensitiveCandidate(text) {
+  return /(password|passcode|api[_ -]?key|token|secret|کلمه عبور|رمز عبور|رمز ورود|شماره کارت|cvv|دبیت|credit card|ip address|آدرس آی ?پی)/i.test(text);
+}
+
+function findSimilar(memories, content) {
+  const q = tokenize(content);
+  let best = null, bestScore = 0;
+  for (const m of memories.filter(x => x.status === 'active')) {
+    const score = retrievalScore(m, q);
+    if (score > bestScore) { bestScore = score; best = m; }
+  }
+  return bestScore >= 0.48 ? best : null;
+}
+
+function dedupeAndPrune(memories) {
+  const out = [];
+  const seen = new Set();
+  for (const m of memories.sort((a,b) => (b.importance||0) - (a.importance||0))) {
+    const key = tokenize(m.content).sort().join('|');
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(m);
+  }
+  return out.slice(0, MEMORY_MAX);
+}
+
+function parseJsonObject(raw) {
+  try { return JSON.parse(raw); } catch {}
+  const match = String(raw).match(/\{[\s\S]*\}/);
+  if (!match) return null;
+  try { return JSON.parse(match[0]); } catch { return null; }
+}
+
+function clamp(value, min, max) {
+  if (!Number.isFinite(value)) return min;
+  return Math.min(max, Math.max(min, value));
+}
+
+async function githubFile(env, path) {
+  const r = await fetch(`https://api.github.com/repos/amirsepehr2020/redlighte-data/contents/${path}?ref=main`, { headers: githubHeaders(env) });
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error(`GitHub GET ${r.status}`);
+  const x = await r.json();
+  const bytes = Uint8Array.from(atob(x.content.replace(/\n/g, '')), c => c.charCodeAt(0));
+  return { sha: x.sha, content: new TextDecoder().decode(bytes) };
+}
+
+async function githubWrite(env, path, data, sha, message) {
+  const content = toBase64(JSON.stringify(data, null, 2));
+  const r = await fetch(`https://api.github.com/repos/amirsepehr2020/redlighte-data/contents/${path}`, { method: 'PUT', headers: { ...githubHeaders(env), 'Content-Type': 'application/json' }, body: JSON.stringify({ message, content, branch: 'main', ...(sha ? { sha } : {}) }) });
+  if (!r.ok) throw new Error(`GitHub PUT ${r.status}: ${await r.text()}`);
+}
+
+function githubHeaders(env) {
+  return { Authorization: `Bearer ${env.GITHUB_TOKEN}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'Redlighte' };
+}
+
+function toBase64(text) {
+  const bytes = new TextEncoder().encode(text); let s = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(s);
+}

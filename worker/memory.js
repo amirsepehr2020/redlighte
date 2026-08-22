@@ -17,7 +17,6 @@ export async function extractAndMergeMemory(env, username, userMessage, recentMe
   if (!env?.AI || !username || typeof userMessage !== 'string') return null;
   const input = userMessage.trim();
   if (input.length < 3) return null;
-
   const { data } = await core.getMemory(env, username);
   if (!data.enabled) return null;
 
@@ -94,25 +93,25 @@ RECENT CONVERSATION CONTEXT:
 ${JSON.stringify(recentMessages.slice(-8))}`;
 
   try {
-    const result = await env.AI.run(MEMORY_ANALYZER_MODEL, {
-      messages: [{ role: 'system', content: prompt }],
-      max_tokens: 450,
-      temperature: 0
-    });
+    const result = await env.AI.run(MEMORY_ANALYZER_MODEL, { messages: [{ role: 'system', content: prompt }], max_tokens: 450, temperature: 0 });
     const raw = result?.response || result?.result?.response || '';
     const candidate = parseObject(raw);
     if (!candidate?.remember || typeof candidate.content !== 'string') return null;
-
     const type = MEMORY_TYPES.has(candidate.type) ? candidate.type : 'fact';
     const content = String(candidate.content).trim().replace(/[.!؟]+$/u, '').slice(0, 500);
     if (!content) return null;
-    const confidence = clamp(candidate.confidence, 0, 1);
-    const importance = clamp(candidate.importance, 0, 1);
+    const confidence = clamp(candidate.confidence, 0, 1), importance = clamp(candidate.importance, 0, 1);
     if (confidence < 0.65 || importance < 0.65) return null;
 
     const key = normalizeKey(candidate.key || `${type}.${content}`);
     const targetId = typeof candidate.existingId === 'string' ? candidate.existingId : (existing.find(m => m.key === key)?.id || null);
-    const memory = await core.addManualMemory(env, username, { key, type, content });
+    let memory;
+    if (targetId) {
+      memory = await core.updateManualMemory(env, username, targetId, { key, type, content });
+    } else {
+      memory = await core.addManualMemory(env, username, { key, type, content });
+    }
+    if (!memory) return null;
     return { memory, action: targetId ? 'updated' : 'created' };
   } catch (error) {
     console.error('MEMORY_SECOND_PASS_ERROR', error);
@@ -120,19 +119,6 @@ ${JSON.stringify(recentMessages.slice(-8))}`;
   }
 }
 
-function parseObject(raw) {
-  try { return JSON.parse(raw); } catch {}
-  const match = String(raw).match(/\{[\s\S]*\}/);
-  if (!match) return null;
-  try { return JSON.parse(match[0]); } catch { return null; }
-}
-
-function normalizeKey(value) {
-  return String(value || '').trim().toLowerCase().replace(/[\u200c\s]+/g, '.').replace(/[^\p{L}\p{N}._-]+/gu, '').slice(0, 180);
-}
-
-function clamp(value, min, max) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return min;
-  return Math.min(max, Math.max(min, n));
-}
+function parseObject(raw) { try { return JSON.parse(raw); } catch {} const match = String(raw).match(/\{[\s\S]*\}/); if (!match) return null; try { return JSON.parse(match[0]); } catch { return null; } }
+function normalizeKey(value) { return String(value || '').trim().toLowerCase().replace(/[\u200c\s]+/g, '.').replace(/[^\p{L}\p{N}._-]+/gu, '').slice(0, 180); }
+function clamp(value, min, max) { const n = Number(value); if (!Number.isFinite(n)) return min; return Math.min(max, Math.max(min, n)); }

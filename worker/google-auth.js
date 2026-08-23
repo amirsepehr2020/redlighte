@@ -38,11 +38,7 @@ async function startGoogle(request,env){
   googleUrl.searchParams.set('state',state);
   googleUrl.searchParams.set('nonce',nonce);
   googleUrl.searchParams.set('prompt','select_account');
-  return new Response(null,{status:302,headers:{
-    Location:googleUrl.toString(),
-    'Set-Cookie':cookie(STATE_COOKIE,statePayload,600),
-    'Cache-Control':'no-store'
-  }});
+  return new Response(null,{status:302,headers:{Location:googleUrl.toString(),'Set-Cookie':cookie(STATE_COOKIE,statePayload,600),'Cache-Control':'no-store'}});
 }
 
 async function googleCallback(request,env){
@@ -97,7 +93,8 @@ async function completeGoogle(request,env,cors){
     await githubWrite(env,path,data,file.sha,'Link Google account');
     await githubWrite(env,mappingPath,{username:session.username,userId:session.id,linkedAt:new Date().toISOString()},null,'Create Google account mapping');
     const sessionCookie=await makeSessionCookie(new URL(request.url),env,data.user);
-    return new Response(JSON.stringify({ok:true,user:{id:data.user.id,name:data.user.name,username:data.user.username}}),{status:200,headers:{...cors,'Content-Type':'application/json','Cache-Control':'no-store','Set-Cookie':`${sessionCookie}, ${clearCookie(PENDING_COOKIE)}`}});
+    const headers=new Headers(cors);headers.set('Content-Type','application/json');headers.set('Cache-Control','no-store');headers.append('Set-Cookie',sessionCookie);headers.append('Set-Cookie',clearCookie(PENDING_COOKIE));
+    return new Response(JSON.stringify({ok:true,user:{id:data.user.id,name:data.user.name,username:data.user.username}}),{status:200,headers});
   }
   const username=await uniqueUsername(env,pending.name);
   const id=crypto.randomUUID();
@@ -105,7 +102,8 @@ async function completeGoogle(request,env,cors){
   await githubWrite(env,`users/${username}/data.json`,data,null,'Create Google account');
   await githubWrite(env,mappingPath,{username,userId:id,linkedAt:new Date().toISOString()},null,'Create Google account mapping');
   const sessionCookie=await makeSessionCookie(new URL(request.url),env,data.user);
-  return new Response(JSON.stringify({ok:true,user:{id,name:pending.name,username}}),{status:201,headers:{...cors,'Content-Type':'application/json','Cache-Control':'no-store','Set-Cookie':`${sessionCookie}, ${clearCookie(PENDING_COOKIE)}`}});
+  const headers=new Headers(cors);headers.set('Content-Type','application/json');headers.set('Cache-Control','no-store');headers.append('Set-Cookie',sessionCookie);headers.append('Set-Cookie',clearCookie(PENDING_COOKIE));
+  return new Response(JSON.stringify({ok:true,user:{id,name:pending.name,username}}),{status:201,headers});
 }
 
 async function verifyGoogleIdToken(token,clientId,expectedNonce){
@@ -153,7 +151,7 @@ function cookie(name,value,maxAge){return `${name}=${value}; Path=/; Domain=redl
 function clearCookie(name){return `${name}=; Path=/; Domain=redlighte.ir; HttpOnly; Secure; SameSite=Lax; Max-Age=0`}
 function readCookie(request,name){const cookies=request.headers.get('Cookie')||'';const match=cookies.match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`));return match?match[1]:''}
 function redirect(url,path){return new Response(null,{status:302,headers:{Location:new URL(path,url.origin).toString(),'Cache-Control':'no-store'}})}
-function redirectWithCookies(url,path,cookies){return new Response(null,{status:302,headers:{Location:new URL(path,url.origin).toString(),'Set-Cookie':cookies,'Cache-Control':'no-store'}})}
+function redirectWithCookies(url,path,cookies){const headers=new Headers();headers.set('Location',new URL(path,url.origin).toString());headers.set('Cache-Control','no-store');cookies.forEach(value=>headers.append('Set-Cookie',value));return new Response(null,{status:302,headers})}
 async function githubFile(env,path){const r=await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/${path}?ref=main`,{headers:githubHeaders(env)});if(r.status===404)return null;if(!r.ok)throw new Error(`GitHub GET ${r.status}`);const x=await r.json();const bytes=Uint8Array.from(atob(x.content.replace(/\n/g,'')),c=>c.charCodeAt(0));return{sha:x.sha,content:new TextDecoder().decode(bytes)}}
 async function githubWrite(env,path,data,sha,message){const content=toBase64(JSON.stringify(data,null,2));const r=await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/${path}`,{method:'PUT',headers:{...githubHeaders(env),'Content-Type':'application/json'},body:JSON.stringify({message,content,branch:'main',...(sha?{sha}:{})})});if(!r.ok)throw new Error(`GitHub PUT ${r.status}: ${await r.text()}`)}
 function githubHeaders(env){return{Authorization:`Bearer ${env.GITHUB_TOKEN}`,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'Redlighte'}}

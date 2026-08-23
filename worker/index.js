@@ -1,9 +1,14 @@
 import core from './index-core.js';
+import googleAuth from './google-auth.js';
 
 export default {
   async fetch(request, env, ctx) {
-    const response = await core.fetch(request, env, ctx);
     const url = new URL(request.url);
+    if (url.pathname.startsWith('/api/auth/google')) {
+      return googleAuth.fetch(request, env, ctx);
+    }
+
+    const response = await core.fetch(request, env, ctx);
     if (url.pathname !== '/api/chat' || request.method !== 'POST' || !response.ok) return response;
 
     try {

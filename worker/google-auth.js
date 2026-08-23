@@ -138,7 +138,7 @@ async function uniqueUsername(env,name){
 }
 
 function cleanUsername(value){return String(value||'').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g,'').slice(0,24)}
-function googleRedirectUri(url){return `https://${url.hostname}/api/auth/google/callback`}
+function googleRedirectUri(){return 'https://redlighte.ir/api/auth/google/callback'}
 function randomToken(bytes){const a=crypto.getRandomValues(new Uint8Array(bytes));return [...a].map(x=>x.toString(16).padStart(2,'0')).join('')}
 async function hashKey(value){const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value));return [...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('')}
 async function signPayload(payload,secret){const raw=toBase64(JSON.stringify(payload));const sig=await sign(raw,secret);return `${raw}.${sig}`}
@@ -156,7 +156,7 @@ async function githubFile(env,path){const r=await fetch(`https://api.github.com/
 async function githubWrite(env,path,data,sha,message){const content=toBase64(JSON.stringify(data,null,2));const r=await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/${path}`,{method:'PUT',headers:{...githubHeaders(env),'Content-Type':'application/json'},body:JSON.stringify({message,content,branch:'main',...(sha?{sha}:{})})});if(!r.ok)throw new Error(`GitHub PUT ${r.status}: ${await r.text()}`)}
 function githubHeaders(env){return{Authorization:`Bearer ${env.GITHUB_TOKEN}`,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'Redlighte'}}
 function toBase64(text){const bytes=new TextEncoder().encode(text);let s='';for(let i=0;i<bytes.length;i+=0x8000)s+=String.fromCharCode(...bytes.subarray(i,i+0x8000));return btoa(s)}
-function fromBase64(value){const binary=atob(value.replace(/\s/g,''));const bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);return new TextDecoder().decode(bytes)}
+function fromBase64(value){const binary=atob(value.replace(/\s/g,''));const bytes=new Uint8Array(binary.length);for(let i=0;i<bytes.length;i++)bytes[i]=binary.charCodeAt(i);return new TextDecoder().decode(bytes)}
 function decodeJson(value){try{return JSON.parse(new TextDecoder().decode(base64urlBytes(value)))}catch{return null}}
 function base64urlBytes(value){const normalized=value.replace(/-/g,'+').replace(/_/g,'/')+'='.repeat((4-value.length%4)%4);const binary=atob(normalized);const bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);return bytes}
 function hex(bytes){return[...bytes].map(x=>x.toString(16).padStart(2,'0')).join('')}

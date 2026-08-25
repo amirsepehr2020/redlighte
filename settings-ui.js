@@ -4,6 +4,7 @@
   const modalTitle=document.getElementById('modalTitle');
   const modalBody=document.getElementById('modalBody');
   const modalClose=document.getElementById('modalClose');
+  const drawer=document.getElementById('sidePanel');
   if(!settingsButton||!modal||!modalTitle||!modalBody)return;
 
   const colors=[['Ruby','#e11d48'],['Crimson','#dc2626'],['Scarlet','#ef233c'],['Classic Red','#ff3045'],['Vermilion','#ff3b30'],['Cherry','#ff1744'],['Rose','#f43f5e'],['Deep Red','#b91c1c']];
@@ -55,7 +56,7 @@
   const card=(icon,label,value,sub='')=>`<div class="settings-card"><div class="settings-card-head"><span class="settings-card-icon">${icon}</span><span>${label}</span></div><strong class="settings-card-value">${value}</strong>${sub?`<small class="settings-card-sub">${sub}</small>`:''}</div>`;
 
   async function openSettings(){
-    if(typeof window.closeDrawer==='function')window.closeDrawer();
+    if(drawer){drawer.classList.remove('open');drawer.setAttribute('aria-hidden','true');}
     modalTitle.textContent='Settings';
     const theme=getTheme(),accent=getAccent(),lang=getLanguage(),motion=getMotion(),historyCount=getHistoryCount();
     const user=await getSession();
@@ -75,7 +76,7 @@
           ${card('✦','Animations',motion,'Based on your system preference')}
         </div></section>
         <section class="settings-section"><p class="settings-section-title">Data & account</p>
-          <div class="settings-status"><span class="settings-status-dot"></span><div class="settings-status-copy"><span class="settings-status-label">Account</span><strong class="settings-status-value">${sessionValue}</strong></div><span class="settings-badge">LIVE</span></div>
+          <div class="settings-status"><span class="settings-status-dot"></span><div class="settings-status-copy"><span class="settings-status-label">Account</span><strong class="settings-status-value">${sessionValue}</strong>${sessionSub?`<small class="settings-card-sub">${sessionSub}</small>`:''}</div><span class="settings-badge">LIVE</span></div>
           <div class="settings-grid">
             ${card('◷','Chat history',`${historyCount} ${historyCount===1?'chat':'chats'}`,historyCount?'Stored in this browser':'No saved chats yet')}
             ${card('▣','Browser storage',(()=>{try{localStorage.setItem('__redlighte_settings_probe','1');localStorage.removeItem('__redlighte_settings_probe');return'Available'}catch{return'Unavailable'}})(),'Used for local preferences & history')}

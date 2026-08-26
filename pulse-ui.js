@@ -17,8 +17,8 @@
       .suggestion-icon{width:22px;height:22px;display:grid;place-items:center;border-radius:50%;background:var(--redSoft);color:var(--red2);font-size:11px;flex:0 0 22px}
       html.light .suggestion{border-color:rgba(0,0,0,.09);background:rgba(255,255,255,.58);box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 8px 24px rgba(0,0,0,.06)}
       html.light .suggestion:hover{border-color:rgba(0,0,0,.15);background:rgba(255,255,255,.82);box-shadow:inset 0 1px 0 rgba(255,255,255,1),0 12px 30px rgba(0,0,0,.09)}
-      @media(max-width:700px){.suggestions{justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;padding:2px 3px 7px;scrollbar-width:none;-webkit-overflow-scrolling:touch}.suggestions::-webkit-scrollbar{display:none}.suggestion{flex:0 0 auto}}
-      @media(max-width:520px){.suggestions{gap:8px;margin-top:12px}.suggestion{min-height:36px;padding:0 12px;font-size:10.5px}.suggestion-icon{width:20px;height:20px;flex-basis:20px;font-size:10px}}
+      @media(max-width:700px){.suggestions{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;flex-wrap:nowrap;overflow:visible;width:100%;max-width:100%;gap:8px;margin-top:12px;padding:0}.suggestion{width:100%;min-height:42px;justify-content:flex-start;flex:0 0 auto;padding:0 14px;font-size:11px;white-space:normal;text-align:left;box-sizing:border-box}}
+      @media(max-width:520px){.suggestions{gap:8px;margin-top:12px}.suggestion{min-height:40px;padding:0 12px;font-size:10.5px}.suggestion-icon{width:20px;height:20px;flex-basis:20px;font-size:10px}}
       @media(prefers-reduced-motion:reduce){.suggestions,.suggestion{transition:none}}
     `;
     document.head.append(style);
@@ -67,7 +67,7 @@
     try { const result = await api('/api/pulse'); render(result.pulse); } catch { document.getElementById('modalBody').innerHTML = '<div class="panel-copy">Pulse is available after signing in.</div>'; }
   };
 
-  const escapeHtml = value => String(value ?? '').replace(/[&<>\"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const escapeHtml = value => String(value ?? '').replace(/[&<>\\"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
   const setupSuggestions = () => {
     const container = document.querySelector('#welcomeView .suggestions');

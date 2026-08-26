@@ -2,11 +2,15 @@ import core from './index-core.js';
 import googleAuth from './google-auth.js';
 import { resolvePulseContext, commitPulseAfterChat, getPulse, publicPulse, updatePulseSettings } from './pulse.js';
 import { getPulseSession } from './pulse-auth.js';
+import { handleRoom, RoomDurableObject, PresenceDurableObject } from './room.js';
+
+export { RoomDurableObject, PresenceDurableObject };
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (url.pathname.startsWith('/api/auth/google')) return googleAuth.fetch(request, env, ctx);
+    if (url.pathname.startsWith('/api/room')) return handleRoom(request, env, ctx, url);
     if (url.pathname === '/api/pulse' || url.pathname === '/api/pulse/settings') return handlePulse(request, env, url.pathname);
 
     let pulseResult = null;
@@ -54,7 +58,6 @@ export default {
           payload.memory.notification = { title, type, content: compact };
         }
       }
-
       if (pulseResult && pulseSession && typeof payload.message === 'string') {
         try {
           const saved = await commitPulseAfterChat(env, pulseSession.username, pulseResult.data, pulseResult.file, payload.message);
@@ -64,7 +67,6 @@ export default {
           payload.pulse = publicPulse(pulseResult.data);
         }
       }
-
       const headers = new Headers(response.headers);
       headers.set('Content-Type', 'application/json; charset=utf-8');
       headers.set('Cache-Control', 'no-store');

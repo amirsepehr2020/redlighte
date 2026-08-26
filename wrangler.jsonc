@@ -5,7 +5,7 @@
   "compatibility_date":"2026-08-16",
   "observability":{"enabled":true,"traces":{"enabled":true}},
   "ai":{"binding":"AI"},
-  "durable_objects":{"bindings":[{"name":"ROOMS","class_name":"RoomDurableObject"},{"name":"PRESENCE","class_name":"PresenceDurableObject"},{"name":"ROOM_INDEX","class_name":"RoomIndexDurableObject"}]},
-  "migrations":[{"tag":"v1-room","new_sqlite_classes":["RoomDurableObject","PresenceDurableObject"]},{"tag":"v2-room-index","new_sqlite_classes":["RoomIndexDurableObject"]}],
+  "durable_objects":{"bindings":[{"name":"ROOMS","class_name":"RoomDurableObject"},{"name":"PRESENCE","class_name":"PresenceDurableObject"},{"name":"ROOM_INDEX","class_name":"RoomIndexDurableObject"},{"name":"LIVE_SHARE","class_name":"LiveShareDurableObject"}]},
+  "migrations":[{"tag":"v1-room","new_sqlite_classes":["RoomDurableObject","PresenceDurableObject"]},{"tag":"v2-room-index","new_sqlite_classes":["RoomIndexDurableObject"]},{"tag":"v3-live-share","new_sqlite_classes":["LiveShareDurableObject"]}],
   "assets":{"directory":".","binding":"ASSETS","run_worker_first":["/api/*"],"not_found_handling":"single-page-application"}
 }

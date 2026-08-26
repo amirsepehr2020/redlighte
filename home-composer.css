@@ -32,3 +32,11 @@ html.light .welcome-view .composer::after,html.light .bottom-composer .composer:
 html.light .welcome-view .composer:focus-within,html.light .bottom-composer .composer:focus-within{border-color:rgba(0,0,0,.16);box-shadow:0 0 0 4px rgba(255,48,69,.05),0 24px 80px rgba(0,0,0,.14),inset 0 1px 0 rgba(255,255,255,1)}
 @media(max-width:520px){.welcome-view .composer,.bottom-composer .composer{border-radius:22px}.welcome-view .composer::before,.bottom-composer .composer::before{border-radius:21px}}
 @media(prefers-reduced-motion:reduce){.welcome-view .composer,.bottom-composer .composer{transition:none}}
+
+/* Mobile home layout fix: keep the full welcome screen centered instead of pinning the composer to the bottom. */
+@media(max-width:700px){
+  .welcome-view{place-items:center!important;min-height:calc(100svh - 68px);padding-top:24px!important;padding-bottom:24px!important}
+}
+@media(max-width:520px){
+  .welcome-view{min-height:calc(100svh - 64px);padding-top:18px!important;padding-bottom:22px!important}
+}

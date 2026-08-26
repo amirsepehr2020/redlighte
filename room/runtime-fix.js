@@ -17,7 +17,15 @@
       };
     }
     const joinBtn=$('#join');
-    if(joinBtn){joinBtn.onclick=joinCode;}
+    if(joinBtn)joinBtn.onclick=joinCode;
+    let lastLiveSocket=null,lastReadyRoom=null;
+    setInterval(()=>{
+      if(typeof isHost!=='function' || isHost() || !currentRoom || !liveWs)return;
+      if(liveWs.readyState===WebSocket.OPEN && (liveWs!==lastLiveSocket || lastReadyRoom!==roomId)){
+        lastLiveSocket=liveWs;lastReadyRoom=roomId;
+        liveWs.send(JSON.stringify({type:'READY',host:currentRoom.owner.username}));
+      }
+    },250);
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();
 })();

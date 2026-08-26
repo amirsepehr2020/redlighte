@@ -1,14 +1,41 @@
 import core from './index-core.js';
 import googleAuth from './google-auth.js';
+import { resolvePulseContext, commitPulseAfterChat, getPulse, publicPulse, updatePulseSettings } from './pulse.js';
+import { getPulseSession } from './pulse-auth.js';
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    if (url.pathname.startsWith('/api/auth/google')) {
-      return googleAuth.fetch(request, env, ctx);
+    if (url.pathname.startsWith('/api/auth/google')) return googleAuth.fetch(request, env, ctx);
+    if (url.pathname === '/api/pulse' || url.pathname === '/api/pulse/settings') return handlePulse(request, env, url.pathname);
+
+    let pulseResult = null;
+    let pulseSession = null;
+    let coreRequest = request;
+
+    if (url.pathname === '/api/chat' && request.method === 'POST') {
+      try {
+        pulseSession = await getPulseSession(request, env);
+        if (pulseSession) {
+          const body = await request.clone().json();
+          const input = typeof body?.message === 'string' ? body.message.trim() : '';
+          const messages = Array.isArray(body?.messages) ? body.messages : [];
+          if (input) {
+            pulseResult = await resolvePulseContext(env, pulseSession.username, input, messages);
+            if (pulseResult.context) {
+              const pulseMessage = { role: 'assistant', content: pulseResult.context };
+              const enhancedMessages = [pulseMessage, ...messages].slice(-20);
+              coreRequest = new Request(request, { body: JSON.stringify({ ...body, messages: enhancedMessages }) });
+            }
+          }
+        }
+      } catch (error) {
+        console.error('PULSE_CONTEXT_ERROR', error);
+        coreRequest = request;
+      }
     }
 
-    const response = await core.fetch(request, env, ctx);
+    const response = await core.fetch(coreRequest, env, ctx);
     if (url.pathname !== '/api/chat' || request.method !== 'POST' || !response.ok) return response;
 
     try {
@@ -22,28 +49,57 @@ export default {
           const type = String(payload.memory.type || 'memory').toUpperCase();
           const content = match[1].trim().replace(/[\r\n]+/g, ' ');
           const compact = content.length > 140 ? `${content.slice(0, 137)}…` : content;
-          const notice = updated
-            ? `✦  MEMORY UPDATED\n   ${type}\n   ${compact}`
-            : `✦  SAVED TO MEMORY\n   ${type}\n   ${compact}`;
+          const notice = updated ? `✦  MEMORY UPDATED\n   ${type}\n   ${compact}` : `✦  SAVED TO MEMORY\n   ${type}\n   ${compact}`;
           payload.message = payload.message.replace(marker, `\n\n${notice}`);
-          payload.memory.notification = {
-            title,
-            type,
-            content: compact
-          };
+          payload.memory.notification = { title, type, content: compact };
+        }
+      }
+
+      if (pulseResult && pulseSession && typeof payload.message === 'string') {
+        try {
+          const saved = await commitPulseAfterChat(env, pulseSession.username, pulseResult.data, pulseResult.file, payload.message);
+          payload.pulse = publicPulse(saved || pulseResult.data);
+        } catch (error) {
+          console.error('PULSE_SAVE_ERROR', error);
+          payload.pulse = publicPulse(pulseResult.data);
         }
       }
 
       const headers = new Headers(response.headers);
       headers.set('Content-Type', 'application/json; charset=utf-8');
       headers.set('Cache-Control', 'no-store');
-      return new Response(JSON.stringify(payload), {
-        status: response.status,
-        statusText: response.statusText,
-        headers
-      });
+      return new Response(JSON.stringify(payload), { status: response.status, statusText: response.statusText, headers });
     } catch {
       return response;
     }
   }
 };
+
+async function handlePulse(request, env, path) {
+  const cors = pulseCors(request);
+  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
+  const session = await getPulseSession(request, env);
+  if (!session) return pulseJson({ error: 'Unauthorized.' }, 401, cors);
+  try {
+    if (path === '/api/pulse' && request.method === 'GET') {
+      const { data } = await getPulse(env, session.username);
+      return pulseJson({ pulse: publicPulse(data) }, 200, cors);
+    }
+    if (path === '/api/pulse/settings' && (request.method === 'PUT' || request.method === 'POST')) {
+      const body = await request.json();
+      const data = await updatePulseSettings(env, session.username, body?.enabled);
+      return pulseJson({ pulse: publicPulse(data) }, 200, cors);
+    }
+    return pulseJson({ error: 'Not found.' }, 404, cors);
+  } catch (error) {
+    console.error('PULSE_API_ERROR', error);
+    return pulseJson({ error: 'Pulse service error.' }, 500, cors);
+  }
+}
+
+function pulseCors(request) {
+  const origin = request.headers.get('Origin');
+  const allowed = origin && /^https:\/\/(?:www\.)?redlighte\.ir$/.test(origin) ? origin : 'https://redlighte.ir';
+  return { 'Access-Control-Allow-Origin': allowed, 'Access-Control-Allow-Credentials': 'true', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Allow-Methods': 'GET,PUT,POST,OPTIONS', Vary: 'Origin' };
+}
+function pulseJson(data, status, headers) { return new Response(JSON.stringify(data), { status, headers: { ...headers, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }); }

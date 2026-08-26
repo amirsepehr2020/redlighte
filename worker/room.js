@@ -1,252 +1,32 @@
 import core from './index-core.js';
-
-const ROOM_TTL = 60 * 60 * 1000;
-const INACTIVITY_TTL = 15 * 60 * 1000;
-const MAX_MEMBERS = 8;
-const MAX_CHAT = 100;
-const DATA_REPO = 'amirsepehr2020/redlighte-data';
-
-export async function handleRoom(request, env, ctx, url) {
-  const auth = await authenticate(request, env);
-  if (!auth) return roomJson({ error: 'Unauthorized.' }, 401, roomCors(request));
-  const path = url.pathname;
-  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: roomCors(request) });
-
-  try {
-    if (path === '/api/room/me' && request.method === 'GET') return roomJson({ user: auth.user }, 200, roomCors(request));
-    if (path === '/api/room/users' && request.method === 'GET') return listUsers(request, env, auth.user, url.searchParams.get('q') || '');
-    if (path === '/api/room/create' && request.method === 'POST') return createRoom(request, env, auth.user);
-    const match = path.match(/^\/api\/room\/([A-Za-z0-9_-]+)(\/.*)?$/);
-    if (!match) return roomJson({ error: 'Not found.' }, 404, roomCors(request));
-    const roomId = match[1];
-    const sub = match[2] || '';
-    if (sub === '/ws') return roomWebSocket(request, env, auth.user, roomId);
-    if (sub === '/invite' && request.method === 'POST') return roomInvite(request, env, auth.user, roomId);
-    if (sub === '/join' && request.method === 'POST') return roomJoin(request, env, auth.user, roomId);
-    if (sub === '/close' && request.method === 'POST') return roomClose(request, env, auth.user, roomId);
-    if (sub === '' && request.method === 'GET') return roomInfo(env, auth.user, roomId);
-    return roomJson({ error: 'Not found.' }, 404, roomCors(request));
-  } catch (error) {
-    console.error('ROOM_API_ERROR', error);
-    return roomJson({ error: 'Room service error.' }, 500, roomCors(request));
-  }
+const ROOM_TTL=3600000,MAX_MEMBERS=8,MAX_CHAT=100,DATA_REPO='amirsepehr2020/redlighte-data';
+export async function handleRoom(request,env,ctx,url){
+ if(request.method==='OPTIONS')return new Response(null,{status:204,headers:cors(request)});
+ const auth=await authenticate(request,env);if(!auth)return roomJson({error:'Unauthorized.'},401,cors(request));
+ const p=url.pathname;
+ if(p==='/api/room/me')return roomJson({user:auth.user},200,cors(request));
+ if(p==='/api/room/users')return users(request,env,auth.user,url.searchParams.get('q')||'');
+ if(p==='/api/room/create'&&request.method==='POST')return create(env,auth.user,request);
+ if(p==='/api/room/presence/ws')return presenceWS(request,env,auth.user);
+ const m=p.match(/^\/api\/room\/([A-Za-z0-9_-]+)(\/.*)?$/);if(!m)return roomJson({error:'Not found.'},404,cors(request));
+ const id=m[1],sub=m[2]||'';
+ if(sub==='/ws')return roomWS(request,env,auth.user,id);
+ if(sub==='/join'&&request.method==='POST')return proxy(env,id,'/join',auth.user);
+ if(sub==='/close'&&request.method==='POST')return proxy(env,id,'/close',auth.user);
+ if(sub==='/info'&&request.method==='GET')return proxy(env,id,'/info',auth.user);
+ if(sub==='/invite'&&request.method==='POST')return invite(request,env,auth.user,id);
+ return roomJson({error:'Not found.'},404,cors(request));
 }
-
-async function authenticate(request, env) {
-  try {
-    const headers = new Headers();
-    const cookie = request.headers.get('Cookie');
-    if (cookie) headers.set('Cookie', cookie);
-    const probe = new Request(new URL('/api/auth/me', request.url), { method: 'GET', headers });
-    const response = await core.fetch(probe, env, {});
-    if (!response.ok) return null;
-    const body = await response.json();
-    return body?.authenticated ? { user: body.user } : null;
-  } catch { return null; }
+async function authenticate(request,env){try{const h=new Headers(),c=request.headers.get('Cookie');if(c)h.set('Cookie',c);const r=await core.fetch(new Request(new URL('/api/auth/me',request.url),{headers:h}),env,{}),b=await r.json();return r.ok&&b?.authenticated?{user:b.user}:null}catch{return null}}
+function stub(env,id){return env.ROOMS.get(env.ROOMS.idFromName(id))}
+async function create(env,user,req){const id=crypto.randomUUID().replace(/-/g,'').slice(0,8).toUpperCase();await stub(env,id).fetch('https://room/init',{method:'POST',body:JSON.stringify({owner:user})});return roomJson({room:{id,url:`/room/${id}`}},201,cors(req))}
+async function proxy(env,id,path,user){return stub(env,id).fetch(`https://room${path}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user})})}
+async function invite(req,env,user,id){const b=await req.json().catch(()=>({})),username=String(b.username||'').trim().toLowerCase();if(!/^[a-z0-9][a-z0-9_.-]{2,31}$/.test(username))return roomJson({error:'Invalid username.'},400,cors(req));const target=await getUser(env,username);if(!target)return roomJson({error:'User not found.'},404,cors(req));const check=await stub(env,id).fetch('https://room/check-invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user})});if(!check.ok)return check;const inv={roomId:id,from:user,target,createdAt:Date.now(),expiresAt:Date.now()+300000};const r=await env.PRESENCE.get(env.PRESENCE.idFromName(username)).fetch('https://presence/invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(inv)});return r.ok?roomJson({ok:true},200,cors(req)):roomJson({error:'Could not deliver invitation.'},503,cors(req))}
+async function roomWS(req,env,user,id){if(req.headers.get('Upgrade')!=='websocket')return roomJson({error:'WebSocket upgrade required.'},426,cors(req));return stub(env,id).fetch(new Request('https://room/ws',{headers:{Upgrade:'websocket','X-Room-User':JSON.stringify(user)}}))}
+async function presenceWS(req,env,user){if(req.headers.get('Upgrade')!=='websocket')return roomJson({error:'WebSocket upgrade required.'},426,cors(req));return env.PRESENCE.get(env.PRESENCE.idFromName(user.username)).fetch(new Request('https://presence/ws',{headers:{Upgrade:'websocket'}}))}
+async function users(req,env,current,q){const out=[],n=q.trim().toLowerCase();try{for(let page=1;page<=3&&out.length<50;page++){const r=await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/users?ref=main&per_page=100&page=${page}`,{headers:gh(env)});if(!r.ok)break;const es=await r.json();if(!Array.isArray(es)||!es.length)break;for(const e of es){if(e.type!=='dir'||e.name.toLowerCase()===current.username)continue;if(!n||e.name.toLowerCase().includes(n))out.push({username:e.name,name:e.name,status:'unknown'});if(out.length>=50)break}if(es.length<100)break}}catch{}return roomJson({users:out},200,cors(req))}
+async function getUser(env,u){const r=await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/users/${encodeURIComponent(u)}/data.json?ref=main`,{headers:gh(env)});if(!r.ok)return null;try{const x=await r.json(),d=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(x.content.replace(/\n/g,'')),c=>c.charCodeAt(0))));return d?.user?{id:d.user.id,name:d.user.name,username:d.user.username}:null}catch{return null}}
+export class RoomDurableObject{constructor(state){this.state=state;this.s=new Map()}async fetch(req){const u=new URL(req.url),r=await this.state.storage.get('room');if(u.pathname==='/init'){if(r)return json(publicRoom(r));const b=await req.json(),now=Date.now(),x={id:this.state.id.toString(),owner:b.owner,members:[b.owner],createdAt:now,lastActivityAt:now,content:null,playback:{playing:false,position:0,updatedAt:now},chat:[],closed:false};await this.state.storage.put('room',x);return json(publicRoom(x),201)}if(!r||r.closed||Date.now()-r.createdAt>ROOM_TTL)return json({error:'Room expired or closed.'},410);if(u.pathname==='/check-invite'){const b=await req.json();return isMember(r,b.user.username)&&r.members.length<MAX_MEMBERS?json({ok:true}):json({error:'You cannot invite from this room.'},403)}if(u.pathname==='/info')return this.info(req,r);if(u.pathname==='/join')return this.join(req,r);if(u.pathname==='/close')return this.close(req,r);if(u.pathname==='/ws')return this.ws(req,r);return json({error:'Not found.'},404)}async info(req,r){const b=await req.json();return isMember(r,b.user.username)?json({room:publicRoom(r)}):json({error:'You are not a member.'},403)}async join(req,r){const b=await req.json();if(isMember(r,b.user.username))return json({ok:true,room:publicRoom(r)});if(r.members.length>=MAX_MEMBERS)return json({error:'Room is full.'},409);r.members.push(b.user);await this.save(r);this.broadcast({type:'MEMBER_JOINED',user:b.user,members:r.members});return json({ok:true,room:publicRoom(r)})}async close(req,r){const b=await req.json();if(r.owner.username!==b.user.username)return json({error:'Only the host can close the room.'},403);r.closed=true;await this.state.storage.put('room',r);this.broadcast({type:'ROOM_CLOSED'});for(const w of this.s.values())try{w.close(1000,'Room closed')}catch{}return json({ok:true})}async ws(req,r){const pair=new WebSocketPair(),[client,server]=Object.values(pair);let u;try{u=JSON.parse(req.headers.get('X-Room-User'))}catch{return new Response(null,{status:400})}if(!isMember(r,u.username)){server.close(1008,'Not a member');return new Response(null,{status:403})}server.accept();this.s.set(u.username,server);server.addEventListener('message',e=>this.message(u,String(e.data),r));server.addEventListener('close',()=>this.s.delete(u.username));server.send(JSON.stringify({type:'ROOM_STATE',room:publicRoom(r)}));return new Response(null,{status:101,webSocket:client})}async message(u,raw,r){let m;try{m=JSON.parse(raw)}catch{return}if(m.type==='SYNC_REQUEST')return this.broadcastTo(u.username,{type:'ROOM_STATE',room:publicRoom(r)});if(['PLAY','PAUSE','SEEK'].includes(m.type)){if(r.owner.username!==u.username)return;const p=Math.max(0,Number(m.position)||0);r.playback={playing:m.type==='PLAY',position:p,updatedAt:Date.now()};await this.save(r);return this.broadcast({type:m.type,position:p,serverTime:Date.now(),actor:u.username})}if(m.type==='CONTENT_CHANGE'){if(r.owner.username!==u.username)return;r.content={url:String(m.url||'').slice(0,2048),title:String(m.title||'').slice(0,200),provider:String(m.provider||'website').slice(0,32)};r.playback={playing:false,position:0,updatedAt:Date.now()};await this.save(r);return this.broadcast({type:'CONTENT_CHANGE',content:r.content})}if(m.type==='REACTION')return this.broadcast({type:'REACTION',emoji:String(m.emoji||'').slice(0,8),actor:u.username});if(m.type==='CHAT'){const t=String(m.text||'').trim().slice(0,500);if(!t)return;r.chat.push({id:crypto.randomUUID(),user:{name:u.name,username:u.username},text:t,at:Date.now()});r.chat=r.chat.slice(-MAX_CHAT);await this.save(r);this.broadcast({type:'CHAT',message:r.chat.at(-1)})}}async save(r){r.lastActivityAt=Date.now();await this.state.storage.put('room',r)}broadcast(m){const x=JSON.stringify(m);for(const [u,w]of this.s)try{w.send(x)}catch{this.s.delete(u)}}broadcastTo(u,m){const w=this.s.get(u);if(w)try{w.send(JSON.stringify(m))}catch{}}
 }
-
-async function createRoom(request, env, user) {
-  const id = randomRoomId();
-  const stub = roomStub(env, id);
-  await stub.fetch('https://room.internal/init', { method: 'POST', body: JSON.stringify({ owner: user }) });
-  return roomJson({ room: { id, url: `/room/${id}` } }, 201, roomCors(request));
-}
-
-async function roomInfo(env, user, roomId) {
-  const response = await roomStub(env, roomId).fetch('https://room.internal/info', { method: 'POST', body: JSON.stringify({ user }) });
-  return response;
-}
-
-async function roomJoin(request, env, user, roomId) {
-  return roomStub(env, roomId).fetch('https://room.internal/join', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user }) });
-}
-
-async function roomClose(request, env, user, roomId) {
-  return roomStub(env, roomId).fetch('https://room.internal/close', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user }) });
-}
-
-async function roomInvite(request, env, user, roomId) {
-  const body = await request.json().catch(() => ({}));
-  const username = typeof body?.username === 'string' ? body.username.trim().toLowerCase() : '';
-  if (!/^[a-z0-9][a-z0-9_.-]{2,31}$/.test(username)) return roomJson({ error: 'Invalid username.' }, 400, roomCors(request));
-  if (username === user.username) return roomJson({ error: 'You are already the owner.' }, 400, roomCors(request));
-  const target = await getUser(env, username);
-  if (!target) return roomJson({ error: 'User not found.' }, 404, roomCors(request));
-  return roomStub(env, roomId).fetch('https://room.internal/invite', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ from: user, target }) });
-}
-
-async function roomWebSocket(request, env, user, roomId) {
-  if (request.headers.get('Upgrade') !== 'websocket') return roomJson({ error: 'WebSocket upgrade required.' }, 426, roomCors(request));
-  return roomStub(env, roomId).fetch(new Request('https://room.internal/ws', { method: 'GET', headers: { Upgrade: 'websocket', 'X-Room-User': JSON.stringify(user) } }));
-}
-
-async function listUsers(request, env, currentUser, query) {
-  const q = query.trim().toLowerCase();
-  try {
-    const users = [];
-    for (let page = 1; page <= 3 && users.length < 50; page++) {
-      const r = await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/users?ref=main&per_page=100&page=${page}`, { headers: githubHeaders(env) });
-      if (!r.ok) break;
-      const entries = await r.json();
-      if (!Array.isArray(entries) || !entries.length) break;
-      for (const entry of entries) {
-        if (entry.type !== 'dir') continue;
-        const username = entry.name.toLowerCase();
-        if (username === currentUser.username) continue;
-        if (!q || username.includes(q)) users.push({ username, name: username, status: 'offline' });
-        if (users.length >= 50) break;
-      }
-      if (entries.length < 100) break;
-    }
-    return roomJson({ users }, 200, roomCors(request));
-  } catch {
-    return roomJson({ users: [] }, 200, roomCors(request));
-  }
-}
-
-async function getUser(env, username) {
-  const r = await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/users/${encodeURIComponent(username)}/data.json?ref=main`, { headers: githubHeaders(env) });
-  if (!r.ok) return null;
-  try {
-    const x = await r.json();
-    const bytes = Uint8Array.from(atob(x.content.replace(/\n/g, '')), c => c.charCodeAt(0));
-    const data = JSON.parse(new TextDecoder().decode(bytes));
-    return data?.user ? { id: data.user.id, name: data.user.name, username: data.user.username } : null;
-  } catch { return null; }
-}
-
-function roomStub(env, id) {
-  return env.ROOMS.get(env.ROOMS.idFromName(id));
-}
-
-export class RoomDurableObject {
-  constructor(state) {
-    this.state = state;
-    this.sessions = new Map();
-    this.invites = new Map();
-  }
-
-  async fetch(request) {
-    const url = new URL(request.url);
-    const stored = await this.state.storage.get('room');
-    if (url.pathname === '/init' && request.method === 'POST') {
-      if (stored) return json({ room: publicRoom(stored) });
-      const body = await request.json();
-      const room = { id: this.state.id.toString(), owner: body.owner, members: [body.owner], createdAt: Date.now(), lastActivityAt: Date.now(), content: null, playback: { playing: false, position: 0, updatedAt: Date.now() }, chat: [], closed: false };
-      await this.state.storage.put('room', room);
-      return json({ room: publicRoom(room) }, 201);
-    }
-    if (!stored || stored.closed) return json({ error: 'Room expired or closed.' }, 410);
-    if (url.pathname === '/info') return this.info(await request.json(), stored);
-    if (url.pathname === '/join') return this.join(await request.json(), stored);
-    if (url.pathname === '/invite') return this.invite(await request.json(), stored);
-    if (url.pathname === '/close') return this.close(await request.json(), stored);
-    if (url.pathname === '/ws') return this.ws(request, stored);
-    return json({ error: 'Not found.' }, 404);
-  }
-
-  async info(body, room) {
-    if (!isMember(room, body.user.username) && room.owner.username !== body.user.username) return json({ error: 'You are not a member.' }, 403);
-    await this.touch(room);
-    return json({ room: publicRoom(room) });
-  }
-
-  async join(body, room) {
-    if (room.members.some(x => x.username === body.user.username)) return json({ ok: true, room: publicRoom(room) });
-    if (room.members.length >= MAX_MEMBERS) return json({ error: 'Room is full.' }, 409);
-    room.members.push(body.user);
-    await this.touch(room);
-    await this.state.storage.put('room', room);
-    this.broadcast({ type: 'MEMBER_JOINED', user: body.user, members: room.members });
-    return json({ ok: true, room: publicRoom(room) });
-  }
-
-  async invite(body, room) {
-    if (room.owner.username !== body.from.username && !isMember(room, body.from.username)) return json({ error: 'Not a member.' }, 403);
-    if (room.members.length >= MAX_MEMBERS) return json({ error: 'Room is full.' }, 409);
-    const invitation = { roomId: room.id, from: body.from, target: body.target, createdAt: Date.now(), expiresAt: Date.now() + 5 * 60 * 1000 };
-    this.invites.set(body.target.username, invitation);
-    this.broadcast({ type: 'INVITATION', invitation }, body.target.username);
-    return json({ ok: true });
-  }
-
-  async close(body, room) {
-    if (room.owner.username !== body.user.username) return json({ error: 'Only the host can close the room.' }, 403);
-    room.closed = true;
-    await this.state.storage.put('room', room);
-    this.broadcast({ type: 'ROOM_CLOSED' });
-    for (const ws of this.sessions.values()) try { ws.close(1000, 'Room closed'); } catch {}
-    this.sessions.clear();
-    return json({ ok: true });
-  }
-
-  async ws(request, room) {
-    const pair = new WebSocketPair();
-    const [client, server] = Object.values(pair);
-    const rawUser = request.headers.get('X-Room-User');
-    let user;
-    try { user = JSON.parse(rawUser); } catch { server.close(1008, 'Invalid user'); return new Response(null, { status: 400 }); }
-    if (!isMember(room, user.username) && room.owner.username !== user.username) { server.close(1008, 'Not a member'); return new Response(null, { status: 403 }); }
-    server.accept();
-    this.sessions.set(user.username, server);
-    server.addEventListener('message', e => this.message(server, user, String(e.data), room));
-    server.addEventListener('close', () => this.sessions.delete(user.username));
-    server.send(JSON.stringify({ type: 'ROOM_STATE', room: publicRoom(room) }));
-    this.broadcast({ type: 'PRESENCE', username: user.username, online: true });
-    return new Response(null, { status: 101, webSocket: client });
-  }
-
-  async message(server, user, raw, room) {
-    let msg;
-    try { msg = JSON.parse(raw); } catch { return; }
-    await this.touch(room);
-    if (msg.type === 'SYNC_REQUEST') return server.send(JSON.stringify({ type: 'ROOM_STATE', room: publicRoom(room) }));
-    if (msg.type === 'PLAY' || msg.type === 'PAUSE' || msg.type === 'SEEK') {
-      if (room.owner.username !== user.username && msg.hostOnly !== false) return;
-      const position = Number.isFinite(Number(msg.position)) ? Math.max(0, Number(msg.position)) : room.playback.position;
-      room.playback = { playing: msg.type === 'PLAY', position, updatedAt: Date.now() };
-      await this.state.storage.put('room', room);
-      this.broadcast({ type: msg.type, position, serverTime: Date.now(), actor: user.username });
-      return;
-    }
-    if (msg.type === 'CONTENT_CHANGE') {
-      if (room.owner.username !== user.username) return;
-      room.content = { url: String(msg.url || '').slice(0, 2048), title: String(msg.title || '').slice(0, 200), provider: String(msg.provider || 'website').slice(0, 32) };
-      room.playback = { playing: false, position: 0, updatedAt: Date.now() };
-      await this.state.storage.put('room', room);
-      this.broadcast({ type: 'CONTENT_CHANGE', content: room.content });
-      return;
-    }
-    if (msg.type === 'REACTION') return this.broadcast({ type: 'REACTION', emoji: String(msg.emoji || '').slice(0, 8), actor: user.username });
-    if (msg.type === 'CHAT') {
-      const text = String(msg.text || '').trim().slice(0, 500);
-      if (!text) return;
-      room.chat.push({ id: crypto.randomUUID(), user: { name: user.name, username: user.username }, text, at: Date.now() });
-      room.chat = room.chat.slice(-MAX_CHAT);
-      await this.state.storage.put('room', room);
-      this.broadcast({ type: 'CHAT', message: room.chat.at(-1) });
-    }
-  }
-
-  async touch(room) {
-    room.lastActivityAt = Date.now();
-    if (Date.now() - room.createdAt > ROOM_TTL || Date.now() - room.lastActivityAt > INACTIVITY_TTL) room.closed = true;
-    await this.state.storage.put('room', room);
-  }
-
-  broadcast(message, onlyUser = null) {
-    const raw = JSON.stringify(message);
-    for (const [username, ws] of this.sessions) {
-      if (onlyUser && username !== onlyUser) continue;
-      try { ws.send(raw); } catch { this.sessions.delete(username); }
-    }
-  }
-}
-
-function isMember(room, username) { return room.members.some(x => x.username === username); }
-function publicRoom(room) { return { id: room.id, owner: room.owner, members: room.members, createdAt: room.createdAt, lastActivityAt: room.lastActivityAt, content: room.content, playback: room.playback, chat: room.chat.slice(-50), closed: room.closed }; }
-function randomRoomId() { return crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase(); }
-function githubHeaders(env) { return { Authorization: `Bearer ${env.GITHUB_TOKEN}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'Redlighte-Room' }; }
-function roomCors(request) { const origin = request.headers.get('Origin'); const allowed = origin && /^https:\/\/(?:www\.)?redlighte\.ir$/.test(origin) ? origin : 'https://redlighte.ir'; return { 'Access-Control-Allow-Origin': allowed, 'Access-Control-Allow-Credentials': 'true', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Allow-Methods': 'GET,POST,OPTIONS', Vary: 'Origin' }; }
-function roomJson(data, status, headers = {}) { return new Response(JSON.stringify(data), { status, headers: { ...headers, 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } }); }
-function json(data, status = 200) { return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } }); }
+export class PresenceDurableObject{constructor(state){this.state=state;this.s=new Set()}async fetch(req){const u=new URL(req.url);if(u.pathname==='/ws'){const p=new WebSocketPair(),[client,server]=Object.values(p);server.accept();this.s.add(server);server.addEventListener('close',()=>this.s.delete(server));return new Response(null,{status:101,webSocket:client})}if(u.pathname==='/invite'){const inv=await req.json();if(inv.expiresAt<Date.now())return json({error:'Invitation expired.'},410);this.broadcast({type:'INVITATION',invitation:inv});return json({ok:true})}return json({error:'Not found.'},404)}broadcast(m){const x=JSON.stringify(m);for(const w of this.s)try{w.send(x)}catch{this.s.delete(w)}}}
+function isMember(r,u){return r.members.some(x=>x.username===u)}function publicRoom(r){return{id:r.id,owner:r.owner,members:r.members,createdAt:r.createdAt,lastActivityAt:r.lastActivityAt,content:r.content,playback:r.playback,chat:r.chat.slice(-50),closed:r.closed}}function gh(env){return{Authorization:`Bearer ${env.GITHUB_TOKEN}`,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'Redlighte-Room'}}function cors(req){const o=req.headers.get('Origin');return{'Access-Control-Allow-Origin':o&&/^https:\/\/(?:www\.)?redlighte\.ir$/.test(o)?o:'https://redlighte.ir','Access-Control-Allow-Credentials':'true','Access-Control-Allow-Headers':'Content-Type','Access-Control-Allow-Methods':'GET,POST,OPTIONS',Vary:'Origin'}}function roomJson(d,s,h={}){return new Response(JSON.stringify(d),{status:s,headers:{...h,'Content-Type':'application/json','Cache-Control':'no-store'}})}function json(d,s=200){return roomJson(d,s)}

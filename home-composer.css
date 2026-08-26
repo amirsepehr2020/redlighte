@@ -44,3 +44,14 @@ html.light .welcome-view .composer:focus-within,html.light .bottom-composer .com
 @media(max-width:520px){
   .welcome-view{min-height:calc(100svh - 64px);padding-top:18px!important;padding-bottom:22px!important}
 }
+
+/* Mobile suggestions: compact chips, sized to their content and kept inline. */
+@media(max-width:700px){
+  #welcomeView .suggestions.suggestions{display:flex;flex-direction:row;align-items:center;justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;width:100%;max-width:100%;gap:8px;margin-top:12px;padding:0 2px 4px;box-sizing:border-box;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  #welcomeView .suggestions.suggestions::-webkit-scrollbar{display:none}
+  #welcomeView .suggestions .suggestion{width:auto;min-width:max-content;min-height:38px;justify-content:center;flex:0 0 auto;padding:0 12px;font-size:10.5px;white-space:nowrap;text-align:center;box-sizing:border-box}
+}
+@media(max-width:520px){
+  #welcomeView .suggestions .suggestion{min-height:36px;padding:0 10px;font-size:10px}
+  #welcomeView .suggestions .suggestion-icon{width:20px;height:20px;flex-basis:20px;font-size:10px}
+}

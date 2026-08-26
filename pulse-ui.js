@@ -8,6 +8,18 @@
       .pulse-toggle-copy b{display:block;font-size:13px}.pulse-toggle-copy small{display:block;margin-top:3px;color:var(--dim);font-size:10px}.pulse-switch{width:42px;height:24px;border:0;border-radius:999px;background:var(--line2);position:relative;cursor:pointer}.pulse-switch:after{content:'';position:absolute;width:18px;height:18px;top:3px;left:3px;border-radius:50%;background:#fff;transition:.2s}.pulse-switch.on{background:var(--red)}.pulse-switch.on:after{left:21px}
       .pulse-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.pulse-stat{padding:11px;border:1px solid var(--line);border-radius:13px;background:var(--surface2)}.pulse-stat span{display:block;color:var(--dim);font-size:9px;text-transform:uppercase;letter-spacing:.08em}.pulse-stat b{display:block;margin-top:5px;font-size:12px}.pulse-meter{height:6px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:8px}.pulse-meter i{display:block;height:100%;width:0;background:var(--red);border-radius:inherit;transition:width .3s}.pulse-item{padding:9px 10px;border-radius:11px;background:var(--surface2);border:1px solid var(--line);font-size:11px}.pulse-item+.pulse-item{margin-top:7px}.pulse-topic{display:flex;align-items:center;gap:8px}.pulse-dot{width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 12px var(--red)}
       .pulse-badge{margin-left:auto;font-size:9px;color:var(--red2);padding:3px 7px;border-radius:99px;background:var(--redSoft)}
+      .suggestions{display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap;margin-top:14px;max-width:760px;width:100%;transition:opacity .2s ease,transform .2s ease}
+      .suggestions.is-updating{opacity:.35;transform:translateY(4px)}
+      .suggestion{display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:0 14px;border:1px solid rgba(255,255,255,.12);border-radius:999px;background:rgba(255,255,255,.045);color:var(--text);font:inherit;font-size:11px;font-weight:650;letter-spacing:.01em;white-space:nowrap;cursor:pointer;backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 8px 24px rgba(0,0,0,.12);transition:transform .2s var(--ease),border-color .2s var(--ease),background .2s var(--ease),box-shadow .2s var(--ease)}
+      .suggestion:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.22);background:rgba(255,255,255,.075);box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 12px 30px rgba(0,0,0,.18)}
+      .suggestion:active{transform:translateY(0) scale(.97)}
+      .suggestion:focus-visible{outline:none;border-color:var(--red2);box-shadow:0 0 0 3px var(--redSoft),inset 0 1px 0 rgba(255,255,255,.1)}
+      .suggestion-icon{width:22px;height:22px;display:grid;place-items:center;border-radius:50%;background:var(--redSoft);color:var(--red2);font-size:11px;flex:0 0 22px}
+      html.light .suggestion{border-color:rgba(0,0,0,.09);background:rgba(255,255,255,.58);box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 8px 24px rgba(0,0,0,.06)}
+      html.light .suggestion:hover{border-color:rgba(0,0,0,.15);background:rgba(255,255,255,.82);box-shadow:inset 0 1px 0 rgba(255,255,255,1),0 12px 30px rgba(0,0,0,.09)}
+      @media(max-width:700px){.suggestions{justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;padding:2px 3px 7px;scrollbar-width:none;-webkit-overflow-scrolling:touch}.suggestions::-webkit-scrollbar{display:none}.suggestion{flex:0 0 auto}}
+      @media(max-width:520px){.suggestions{gap:8px;margin-top:12px}.suggestion{min-height:36px;padding:0 12px;font-size:10.5px}.suggestion-icon{width:20px;height:20px;flex-basis:20px;font-size:10px}}
+      @media(prefers-reduced-motion:reduce){.suggestions,.suggestion{transition:none}}
     `;
     document.head.append(style);
   };
@@ -57,8 +69,81 @@
 
   const escapeHtml = value => String(value ?? '').replace(/[&<>\"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
+  const setupSuggestions = () => {
+    const container = document.querySelector('#welcomeView .suggestions');
+    const input = document.getElementById('homeInput');
+    if (!container || !input || container.dataset.enhanced === 'true') return;
+    container.dataset.enhanced = 'true';
+
+    const defaultSuggestions = [
+      ['✨','Explain something','Explain quantum computing in simple terms'],
+      ['💻','Help with code','Write a clean Python function that sorts a list'],
+      ['💡','Brainstorm ideas','Give me three creative ideas for a short video'],
+      ['✍️','Write for me','Write a short professional email about a meeting'],
+      ['🔍','Analyze this','Analyze this idea and tell me its strengths and weaknesses'],
+      ['🌐','Translate','Translate this text into natural English']
+    ];
+    const typedSuggestions = [
+      ['🔍','Analyze this','Analyze the text I wrote and point out the key ideas'],
+      ['✨','Improve it','Improve my text while keeping my original meaning and tone'],
+      ['📝','Rewrite','Rewrite this in a clearer, more natural way'],
+      ['🌐','Translate','Translate this into natural English'],
+      ['🎯','Make it shorter','Make this more concise without losing the important parts']
+    ];
+    const codeSuggestions = [
+      ['🐛','Debug this','Find the bug in my code and explain how to fix it'],
+      ['⚡','Optimize code','Optimize my code for readability and performance'],
+      ['📖','Explain the code','Explain this code step by step'],
+      ['🧪','Write tests','Write useful tests for this code'],
+      ['🔧','Refactor','Refactor this code without changing its behavior']
+    ];
+    const ideaSuggestions = [
+      ['💡','More ideas','Give me more creative ideas based on this'],
+      ['🎬','Turn into a video','Turn this idea into a short video concept'],
+      ['🎯','Pick the best','Compare these ideas and pick the strongest one'],
+      ['🚀','Make it better','Make this idea more original and engaging']
+    ];
+
+    const renderSuggestions = list => {
+      container.classList.add('is-updating');
+      window.setTimeout(() => {
+        container.replaceChildren(...list.map(([icon,label,prompt]) => {
+          const button = document.createElement('button');
+          button.className = 'suggestion';
+          button.type = 'button';
+          button.dataset.prompt = prompt;
+          button.innerHTML = `<span class="suggestion-icon" aria-hidden="true">${icon}</span><span>${label}</span>`;
+          button.onclick = () => {
+            input.value = prompt;
+            input.dispatchEvent(new Event('input', { bubbles:true }));
+            input.focus({preventScroll:true});
+            try { input.setSelectionRange(input.value.length,input.value.length); } catch {}
+          };
+          return button;
+        }));
+        container.classList.remove('is-updating');
+      }, 120);
+    };
+
+    const pickSuggestions = value => {
+      const text = value.trim().toLowerCase();
+      if (!text) return defaultSuggestions;
+      if (/(code|python|javascript|typescript|html|css|java|kotlin|bug|error|function|api|sql|react|node|debug)/i.test(text)) return codeSuggestions;
+      if (/(idea|ideas|video|content|creative|story|design|project)/i.test(text)) return ideaSuggestions;
+      return typedSuggestions;
+    };
+
+    let timer;
+    input.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = window.setTimeout(() => renderSuggestions(pickSuggestions(input.value)), 80);
+    });
+    renderSuggestions(defaultSuggestions);
+  };
+
   const init = () => {
     injectStyle();
+    setupSuggestions();
     const memory = document.getElementById('memoryButton');
     const panel = memory?.parentElement;
     if (memory && panel && !document.getElementById('pulseButton')) {

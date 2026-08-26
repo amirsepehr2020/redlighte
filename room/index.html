@@ -23,12 +23,17 @@
       <div class="hero-actions"><button id="create" class="primary">Create a room <span>↗</span></button><button id="joinPrompt" class="secondary">Join with code</button></div>
       <div id="joinBox" class="join-box hidden"><input id="joinCode" maxlength="16" placeholder="ROOM CODE"><button id="join" class="primary small">Join</button></div>
     </section>
+    <section class="home-panel glass">
+      <div class="panel-title"><span>Room invitations</span><button id="refreshInvites" class="mini">Refresh</button></div>
+      <p class="home-muted">Invitations sent to you appear here. Accept to enter the room or decline to ignore it.</p>
+      <div id="invitations" class="invitations"><div class="empty-invites">No pending invitations.</div></div>
+    </section>
   </main>
 
   <main id="room" class="room-page hidden">
     <section class="room-shell">
-      <div class="player glass">
-        <div class="player-head"><div><span class="live-dot"></span><span id="roomCodeLabel">ROOM</span></div><div class="player-tools"><button id="invite" class="tool">👥 Invite</button><button id="closeRoom" class="tool danger">Close</button></div></div>
+      <div class="player glass" id="playerShell">
+        <div class="player-head"><div><span class="live-dot"></span><span id="roomCodeLabel">ROOM</span></div><div class="player-tools"><button id="invite" class="tool">👥 Invite</button><button id="fullscreen" class="tool">⛶ Fullscreen</button><button id="closeRoom" class="tool danger">Close</button></div></div>
         <div id="viewer" class="viewer"><div id="emptyViewer" class="empty-view"><div class="play-orb">▶</div><h2>What are we watching?</h2><p>Paste a YouTube, direct video, HLS, or embeddable website URL below.</p></div><iframe id="webFrame" class="web-frame hidden" allow="autoplay; fullscreen; picture-in-picture" referrerpolicy="no-referrer"></iframe><video id="video" class="video hidden" controls playsinline></video></div>
         <div class="content-bar"><input id="url" placeholder="Paste a video or website URL…"><button id="load" class="primary small">Load</button></div>
         <div class="syncbar"><button id="playPause" class="play">▶</button><input id="seek" type="range" min="0" max="100" value="0"><span id="time">00:00</span><span class="sync-pill">● SYNCED</span></div>

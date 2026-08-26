@@ -33,9 +33,13 @@ html.light .welcome-view .composer:focus-within,html.light .bottom-composer .com
 @media(max-width:520px){.welcome-view .composer,.bottom-composer .composer{border-radius:22px}.welcome-view .composer::before,.bottom-composer .composer::before{border-radius:21px}}
 @media(prefers-reduced-motion:reduce){.welcome-view .composer,.bottom-composer .composer{transition:none}}
 
-/* Mobile home layout fix: keep the full welcome screen centered instead of pinning the composer to the bottom. */
+/* Mobile home layout: centered, viewport-safe, and never wider than the screen. */
 @media(max-width:700px){
-  .welcome-view{place-items:center!important;min-height:calc(100svh - 68px);padding-top:24px!important;padding-bottom:24px!important}
+  .welcome-view{place-items:center!important;min-height:calc(100svh - 68px);padding-top:24px!important;padding-bottom:24px!important;min-width:0;grid-template-columns:minmax(0,1fr)}
+  .welcome-content{width:100%!important;max-width:820px!important;min-width:0!important}
+  .welcome-content h1{max-width:100%;min-width:0;overflow-wrap:anywhere;word-break:normal}
+  .welcome-content .hero-copy{max-width:100%;min-width:0}
+  .welcome-content .composer{width:100%;max-width:100%;min-width:0}
 }
 @media(max-width:520px){
   .welcome-view{min-height:calc(100svh - 64px);padding-top:18px!important;padding-bottom:22px!important}

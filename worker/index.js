@@ -9,6 +9,9 @@ export { RoomDurableObject, PresenceDurableObject };
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    if (url.pathname === '/room' || url.pathname === '/room/' || /^\/room\/[A-Za-z0-9_-]+$/.test(url.pathname)) {
+      return env.ASSETS.fetch(new Request(new URL('/room/index.html', request.url), request));
+    }
     if (url.pathname.startsWith('/api/auth/google')) return googleAuth.fetch(request, env, ctx);
     if (url.pathname.startsWith('/api/room')) return handleRoom(request, env, ctx, url);
     if (url.pathname === '/api/pulse' || url.pathname === '/api/pulse/settings') return handlePulse(request, env, url.pathname);
@@ -98,10 +101,5 @@ async function handlePulse(request, env, path) {
     return pulseJson({ error: 'Pulse service error.' }, 500, cors);
   }
 }
-
-function pulseCors(request) {
-  const origin = request.headers.get('Origin');
-  const allowed = origin && /^https:\/\/(?:www\.)?redlighte\.ir$/.test(origin) ? origin : 'https://redlighte.ir';
-  return { 'Access-Control-Allow-Origin': allowed, 'Access-Control-Allow-Credentials': 'true', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Allow-Methods': 'GET,PUT,POST,OPTIONS', Vary: 'Origin' };
-}
+function pulseCors(request) { const origin = request.headers.get('Origin'); const allowed = origin && /^https:\/\/(?:www\.)?redlighte\.ir$/.test(origin) ? origin : 'https://redlighte.ir'; return { 'Access-Control-Allow-Origin': allowed, 'Access-Control-Allow-Credentials': 'true', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Allow-Methods': 'GET,PUT,POST,OPTIONS', Vary: 'Origin' }; }
 function pulseJson(data, status, headers) { return new Response(JSON.stringify(data), { status, headers: { ...headers, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }); }

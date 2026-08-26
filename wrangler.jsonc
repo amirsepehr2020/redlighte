@@ -5,13 +5,21 @@
   "compatibility_date": "2026-08-16",
   "observability": {
     "enabled": true,
-    "traces": {
-      "enabled": true
+    "traces": { "enabled": true }
+  },
+  "ai": { "binding": "AI" },
+  "durable_objects": {
+    "bindings": [
+      { "name": "ROOMS", "class_name": "RoomDurableObject" },
+      { "name": "PRESENCE", "class_name": "PresenceDurableObject" }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1-room",
+      "new_sqlite_classes": ["RoomDurableObject", "PresenceDurableObject"]
     }
-  },
-  "ai": {
-    "binding": "AI"
-  },
+  ],
   "assets": {
     "directory": ".",
     "binding": "ASSETS",

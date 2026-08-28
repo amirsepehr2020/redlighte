@@ -17,6 +17,8 @@
       .suggestion-icon{width:22px;height:22px;display:grid;place-items:center;border-radius:50%;background:var(--redSoft);color:var(--red2);font-size:11px;flex:0 0 22px}
       html.light .suggestion{border-color:rgba(0,0,0,.09);background:rgba(255,255,255,.58);box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 8px 24px rgba(0,0,0,.06)}
       html.light .suggestion:hover{border-color:rgba(0,0,0,.15);background:rgba(255,255,255,.82);box-shadow:inset 0 1px 0 rgba(255,255,255,1),0 12px 30px rgba(0,0,0,.09)}
+      .room-top-button{position:relative;display:grid;place-items:center;overflow:visible}.room-top-button svg{width:19px;height:19px;display:block;overflow:visible}.room-top-button .room-icon-ring{fill:none;stroke:currentColor;stroke-width:1.8}.room-top-button .room-icon-screen{fill:currentColor}.room-top-button .room-icon-play{fill:var(--surface,#080808)}.room-top-button .room-icon-live{fill:currentColor}.room-top-button:hover svg{filter:drop-shadow(0 0 5px var(--red,#ff3030));transform:scale(1.06)}.room-top-button svg{transition:transform .18s var(--ease),filter .18s var(--ease)}
+      .room-top-button::after{content:'Redlighte Room';position:absolute;right:50%;top:calc(100% + 7px);transform:translateX(50%) translateY(-3px);padding:4px 7px;border:1px solid var(--line);border-radius:7px;background:var(--surface2);color:var(--text);font-size:9px;font-weight:700;opacity:0;pointer-events:none;white-space:nowrap;transition:.18s var(--ease);box-shadow:0 8px 24px rgba(0,0,0,.2)}.room-top-button:hover::after,.room-top-button:focus-visible::after{opacity:1;transform:translateX(50%) translateY(0)}
       @media(max-width:700px){.suggestions{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;flex-wrap:nowrap;overflow:visible;width:100%;max-width:100%;gap:8px;margin-top:12px;padding:0}.suggestion{width:100%;min-height:42px;justify-content:flex-start;flex:0 0 auto;padding:0 14px;font-size:11px;white-space:normal;text-align:left;box-sizing:border-box}}
       @media(max-width:520px){.suggestions{gap:8px;margin-top:12px}.suggestion{min-height:40px;padding:0 12px;font-size:10.5px}.suggestion-icon{width:20px;height:20px;flex-basis:20px;font-size:10px}}
       @media(prefers-reduced-motion:reduce){.suggestions,.suggestion{transition:none}}
@@ -39,136 +41,16 @@
     const project = p.projectContext || {};
     const signals = p.signals || {};
     const items = Array.isArray(p.activeItems) ? p.activeItems.filter(x => x.type !== 'memory') : [];
-    body.innerHTML = `<div class="pulse-panel-card">
-      <div class="pulse-toggle"><div class="pulse-toggle-copy"><b>Pulse Context</b><small>Let Redlighte keep the right context active for this conversation.</small></div><button id="pulseSwitch" class="pulse-switch ${active ? 'on' : ''}" type="button" aria-label="Toggle Pulse"></button></div>
-      <div class="pulse-grid"><div class="pulse-stat"><span>Topic</span><b>${escapeHtml(context.topic || 'General conversation')}</b></div><div class="pulse-stat"><span>Intent</span><b>${escapeHtml(context.intent || 'general')}</b></div></div>
-      <div class="pulse-stat"><span>Context confidence</span><b>${Math.round(Number(context.confidence || 0) * 100)}%</b><div class="pulse-meter"><i style="width:${Math.max(0,Math.min(100,Number(context.confidence || 0)*100))}%"></i></div></div>
-      <div class="pulse-stat"><span>Context stability</span><b>${Math.round(Number(signals.topicStability || 0) * 100)}%</b><div class="pulse-meter"><i style="width:${Math.max(0,Math.min(100,Number(signals.topicStability || 0)*100))}%"></i></div></div>
-      ${project.active ? `<div class="pulse-item"><b>Project</b><br>${escapeHtml(project.projectName || '')}</div>` : ''}
-      ${context.summary ? `<div class="pulse-item"><b>Active context</b><br>${escapeHtml(context.summary)}</div>` : ''}
-      ${items.length ? `<div>${items.map(x=>`<div class="pulse-item pulse-topic"><span class="pulse-dot"></span><span>${escapeHtml(x.type)}: ${escapeHtml(x.value)}</span></div>`).join('')}</div>` : ''}
-      <div class="pulse-item"><span>Messages processed: <b>${Number(p.metrics?.messagesProcessed || 0)}</b></span></div>
-    </div>`;
+    body.innerHTML = `<div class="pulse-panel-card"><div class="pulse-toggle"><div class="pulse-toggle-copy"><b>Pulse Context</b><small>Let Redlighte keep the right context active for this conversation.</small></div><button id="pulseSwitch" class="pulse-switch ${active ? 'on' : ''}" type="button" aria-label="Toggle Pulse"></button></div><div class="pulse-grid"><div class="pulse-stat"><span>Topic</span><b>${escapeHtml(context.topic || 'General conversation')}</b></div><div class="pulse-stat"><span>Intent</span><b>${escapeHtml(context.intent || 'general')}</b></div></div><div class="pulse-stat"><span>Context confidence</span><b>${Math.round(Number(context.confidence || 0) * 100)}%</b><div class="pulse-meter"><i style="width:${Math.max(0,Math.min(100,Number(context.confidence || 0)*100))}%"></i></div></div><div class="pulse-stat"><span>Context stability</span><b>${Math.round(Number(signals.topicStability || 0) * 100)}%</b><div class="pulse-meter"><i style="width:${Math.max(0,Math.min(100,Number(signals.topicStability || 0)*100))}%"></i></div></div>${project.active ? `<div class="pulse-item"><b>Project</b><br>${escapeHtml(project.projectName || '')}</div>` : ''}${context.summary ? `<div class="pulse-item"><b>Active context</b><br>${escapeHtml(context.summary)}</div>` : ''}${items.length ? `<div>${items.map(x=>`<div class="pulse-item pulse-topic"><span class="pulse-dot"></span><span>${escapeHtml(x.type)}: ${escapeHtml(x.value)}</span></div>`).join('')}</div>` : ''}<div class="pulse-item"><span>Messages processed: <b>${Number(p.metrics?.messagesProcessed || 0)}</b></span></div></div>`;
     const sw = document.getElementById('pulseSwitch');
-    if (sw) sw.onclick = async () => {
-      sw.disabled = true;
-      try { const result = await api('/api/pulse/settings', { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({enabled:!active}) }); render(result.pulse); }
-      catch { window.dispatchEvent(new CustomEvent('redlighte:pulse-error')); }
-    };
+    if (sw) sw.onclick = async () => { sw.disabled = true; try { const result = await api('/api/pulse/settings', { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({enabled:!active}) }); render(result.pulse); } catch { window.dispatchEvent(new CustomEvent('redlighte:pulse-error')); } };
   };
 
-  const open = async () => {
-    const modal = document.getElementById('modal');
-    const title = document.getElementById('modalTitle');
-    if (!modal || !title) return;
-    title.textContent = 'Redlighte Pulse';
-    document.getElementById('modalBody').innerHTML = '<div class="panel-copy">Loading Pulse…</div>';
-    modal.hidden = false;
-    try { const result = await api('/api/pulse'); render(result.pulse); } catch { document.getElementById('modalBody').innerHTML = '<div class="panel-copy">Pulse is available after signing in.</div>'; }
-  };
-
+  const open = async () => { const modal = document.getElementById('modal'); const title = document.getElementById('modalTitle'); if (!modal || !title) return; title.textContent = 'Redlighte Pulse'; document.getElementById('modalBody').innerHTML = '<div class="panel-copy">Loading Pulse…</div>'; modal.hidden = false; try { const result = await api('/api/pulse'); render(result.pulse); } catch { document.getElementById('modalBody').innerHTML = '<div class="panel-copy">Pulse is available after signing in.</div>'; } };
   const escapeHtml = value => String(value ?? '').replace(/[&<>\\"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-
-  const setupSuggestions = () => {
-    const container = document.querySelector('#welcomeView .suggestions');
-    const input = document.getElementById('homeInput');
-    if (!container || !input || container.dataset.enhanced === 'true') return;
-    container.dataset.enhanced = 'true';
-
-    const defaultSuggestions = [
-      ['✨','Explain something','Explain quantum computing in simple terms'],
-      ['💻','Help with code','Write a clean Python function that sorts a list'],
-      ['💡','Brainstorm ideas','Give me three creative ideas for a short video'],
-      ['✍️','Write for me','Write a short professional email about a meeting'],
-      ['🔍','Analyze this','Analyze this idea and tell me its strengths and weaknesses'],
-      ['🌐','Translate','Translate this text into natural English']
-    ];
-    const typedSuggestions = [
-      ['🔍','Analyze this','Analyze the text I wrote and point out the key ideas'],
-      ['✨','Improve it','Improve my text while keeping my original meaning and tone'],
-      ['📝','Rewrite','Rewrite this in a clearer, more natural way'],
-      ['🌐','Translate','Translate this into natural English'],
-      ['🎯','Make it shorter','Make this more concise without losing the important parts']
-    ];
-    const codeSuggestions = [
-      ['🐛','Debug this','Find the bug in my code and explain how to fix it'],
-      ['⚡','Optimize code','Optimize my code for readability and performance'],
-      ['📖','Explain the code','Explain this code step by step'],
-      ['🧪','Write tests','Write useful tests for this code'],
-      ['🔧','Refactor','Refactor this code without changing its behavior']
-    ];
-    const ideaSuggestions = [
-      ['💡','More ideas','Give me more creative ideas based on this'],
-      ['🎬','Turn into a video','Turn this idea into a short video concept'],
-      ['🎯','Pick the best','Compare these ideas and pick the strongest one'],
-      ['🚀','Make it better','Make this idea more original and engaging']
-    ];
-
-    const renderSuggestions = list => {
-      container.classList.add('is-updating');
-      window.setTimeout(() => {
-        container.replaceChildren(...list.map(([icon,label,prompt]) => {
-          const button = document.createElement('button');
-          button.className = 'suggestion';
-          button.type = 'button';
-          button.dataset.prompt = prompt;
-          button.innerHTML = `<span class="suggestion-icon" aria-hidden="true">${icon}</span><span>${label}</span>`;
-          button.onclick = () => {
-            input.value = prompt;
-            input.dispatchEvent(new Event('input', { bubbles:true }));
-            input.focus({preventScroll:true});
-            try { input.setSelectionRange(input.value.length,input.value.length); } catch {}
-          };
-          return button;
-        }));
-        container.classList.remove('is-updating');
-      }, 120);
-    };
-
-    const pickSuggestions = value => {
-      const text = value.trim().toLowerCase();
-      if (!text) return defaultSuggestions;
-      if (/(code|python|javascript|typescript|html|css|java|kotlin|bug|error|function|api|sql|react|node|debug)/i.test(text)) return codeSuggestions;
-      if (/(idea|ideas|video|content|creative|story|design|project)/i.test(text)) return ideaSuggestions;
-      return typedSuggestions;
-    };
-
-    let timer;
-    input.addEventListener('input', () => {
-      clearTimeout(timer);
-      timer = window.setTimeout(() => renderSuggestions(pickSuggestions(input.value)), 80);
-    });
-    renderSuggestions(defaultSuggestions);
-  };
-
-  const init = () => {
-    injectStyle();
-    setupSuggestions();
-    const memory = document.getElementById('memoryButton');
-    const panel = memory?.parentElement;
-    if (memory && panel && !document.getElementById('pulseButton')) {
-      const button = document.createElement('button');
-      button.className = 'panel-action';
-      button.id = 'pulseButton';
-      button.type = 'button';
-      button.innerHTML = '<span class="nav-leading"><span class="nav-icon">◉</span><span>Pulse</span><span class="pulse-badge">LIVE</span></span><span class="nav-arrow">›</span>';
-      memory.insertAdjacentElement('afterend', button);
-      button.onclick = () => { document.getElementById('sidePanel')?.classList.remove('open'); document.getElementById('sidePanel')?.setAttribute('aria-hidden','true'); open(); };
-    }
-
-    const originalFetch = window.fetch.bind(window);
-    window.fetch = async (...args) => {
-      const response = await originalFetch(...args);
-      try {
-        const requestUrl = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
-        if (requestUrl.includes('/api/chat') && response.ok) {
-          const data = await response.clone().json();
-          if (data?.pulse) window.__redlightePulse = data.pulse;
-        }
-      } catch {}
-      return response;
-    };
-  };
-
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once:true }); else init();
+  const setupSuggestions = () => { const container = document.querySelector('#welcomeView .suggestions'); const input = document.getElementById('homeInput'); if (!container || !input || container.dataset.enhanced === 'true') return; container.dataset.enhanced = 'true'; const defaultSuggestions=[['✨','Explain something','Explain quantum computing in simple terms'],['💻','Help with code','Write a clean Python function that sorts a list'],['💡','Brainstorm ideas','Give me three creative ideas for a short video'],['✍️','Write for me','Write a short professional email about a meeting'],['🔍','Analyze this','Analyze the text I wrote and point out the key ideas'],['🌐','Translate','Translate this text into natural English']]; const typedSuggestions=[['🔍','Analyze this','Analyze the text I wrote and point out the key ideas'],['✨','Improve it','Improve my text while keeping my original meaning and tone'],['📝','Rewrite','Rewrite this in a clearer, more natural way'],['🌐','Translate','Translate this into natural English'],['🎯','Make it shorter','Make this more concise without losing the important parts']]; const codeSuggestions=[['🐛','Debug this','Find the bug in my code and explain how to fix it'],['⚡','Optimize code','Optimize my code for readability and performance'],['📖','Explain the code','Explain this code step by step'],['🧪','Write tests','Write useful tests for this code'],['🔧','Refactor','Refactor this code without changing its behavior']]; const ideaSuggestions=[['💡','More ideas','Give me more creative ideas based on this'],['🎬','Turn into a video','Turn this idea into a short video concept'],['🎯','Pick the best','Compare these ideas and pick the strongest one'],['🚀','Make it better','Make this idea more original and engaging']]; const renderSuggestions=list=>{container.classList.add('is-updating');window.setTimeout(()=>{container.replaceChildren(...list.map(([icon,label,prompt])=>{const button=document.createElement('button');button.className='suggestion';button.type='button';button.dataset.prompt=prompt;button.innerHTML=`<span class="suggestion-icon" aria-hidden="true">${icon}</span><span>${label}</span>`;button.onclick=()=>{input.value=prompt;input.dispatchEvent(new Event('input',{bubbles:true}));input.focus({preventScroll:true});try{input.setSelectionRange(input.value.length,input.value.length)}catch{}};return button;}));container.classList.remove('is-updating')},120)}; const pickSuggestions=value=>{const text=value.trim().toLowerCase();if(!text)return defaultSuggestions;if(/(code|python|javascript|typescript|html|css|java|kotlin|bug|error|function|api|sql|react|node|debug)/i.test(text))return codeSuggestions;if(/(idea|ideas|video|content|creative|story|design|project)/i.test(text))return ideaSuggestions;return typedSuggestions};let timer;input.addEventListener('input',()=>{clearTimeout(timer);timer=window.setTimeout(()=>renderSuggestions(pickSuggestions(input.value)),80)});renderSuggestions(defaultSuggestions);};
+  const init = () => { injectStyle(); setupSuggestions(); const memory=document.getElementById('memoryButton'); const panel=memory?.parentElement; if(memory&&panel&&!document.getElementById('pulseButton')){const button=document.createElement('button');button.className='panel-action';button.id='pulseButton';button.type='button';button.innerHTML='<span class="nav-leading"><span class="nav-icon">◉</span><span>Pulse</span><span class="pulse-badge">LIVE</span></span><span class="nav-arrow">›</span>';memory.insertAdjacentElement('afterend',button);button.onclick=()=>{document.getElementById('sidePanel')?.classList.remove('open');document.getElementById('sidePanel')?.setAttribute('aria-hidden','true');open()};}
+    const topActions=document.querySelector('.topbar-actions'); if(topActions&&!document.getElementById('roomTopButton')){const room=document.createElement('button');room.className='icon-button room-top-button';room.id='roomTopButton';room.type='button';room.setAttribute('aria-label','Open Redlighte Room');room.title='Redlighte Room';room.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle class="room-icon-ring" cx="12" cy="12" r="8.4"/><rect class="room-icon-screen" x="8" y="7.7" width="8" height="8.7" rx="1.8"/><path class="room-icon-play" d="M11 10.1v3.9l3.2-1.95z"/><circle class="room-icon-live" cx="12" cy="5.1" r="1.15"/><path class="room-icon-live" d="M6.8 4.7a8.7 8.7 0 0 0-2.2 2.1l1.2.8a7.2 7.2 0 0 1 1.8-1.7zM17.2 4.7l-.8 1.2a7.2 7.2 0 0 1 1.8 1.7l1.2-.8a8.7 8.7 0 0 0-2.2-2.1z"/></svg>';room.onclick=()=>{window.location.href='/room/index.html'};const menu=document.getElementById('menuButton');if(menu)topActions.insertBefore(room,menu);else topActions.append(room);}
+    const originalFetch=window.fetch.bind(window); window.fetch=async(...args)=>{const response=await originalFetch(...args);try{const requestUrl=typeof args[0]==='string'?args[0]:args[0]?.url||'';if(requestUrl.includes('/api/chat')&&response.ok){const data=await response.clone().json();if(data?.pulse)window.__redlightePulse=data.pulse;}}catch{}return response;}; };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();

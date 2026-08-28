@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#070709">
 <meta name="description" content="Redlighte Room — live rooms for watching and sharing together.">
 <title>Redlighte Room</title>
-<link rel="stylesheet" href="/room/styles.css?v=20260826">
+<link rel="stylesheet" href="/room/styles.css?v=20260828">
 <style>.live-video{width:100%;height:100%;object-fit:contain;background:#000}.host-control.hidden{display:none!important}</style>
 </head>
 <body>
@@ -20,8 +20,6 @@
 </main>
 <main id="room" class="room-page hidden"><section class="room-shell"><div class="player glass" id="playerShell"><div class="player-head"><div><span class="live-dot"></span><span id="roomCodeLabel">ROOM</span><small id="liveTimer">LIVE 00:00</small></div><div class="player-tools"><button id="startShare" class="tool host-control">🔴 Start Live Share</button><button id="stopShare" class="tool host-control hidden">■ Stop Share</button><button id="invite" class="tool">👥 Invite</button><button id="fullscreen" class="tool">⛶ Fullscreen</button><button id="closeRoom" class="tool danger">Delete</button></div></div><div id="viewer" class="viewer"><div id="emptyViewer" class="empty-view"><div class="play-orb">▶</div><h2>Start the live room</h2><p>The host can share a browser tab or window. Everyone else watches the same live screen.</p><button id="startShareEmpty" class="primary small host-control">Start Live Share</button></div><video id="liveVideo" class="live-video hidden" autoplay playsinline></video><iframe id="webFrame" class="web-frame hidden" allow="autoplay; fullscreen; picture-in-picture" referrerpolicy="no-referrer"></iframe><video id="video" class="video hidden" controls playsinline></video></div><div class="content-bar" id="contentBar"><input id="url" placeholder="Paste a video or embeddable website URL…"><button id="load" class="primary small">Go live</button></div><div class="syncbar"><button id="playPause" class="play">▶</button><input id="seek" type="range" min="0" max="100" value="0"><span id="time">00:00</span><span class="sync-pill">● LIVE SYNC</span></div></div><aside class="side"><div class="panel glass"><div class="panel-title"><span>People</span><span id="count">0</span></div><div id="members" class="members"></div><button id="invite2" class="invite-wide">＋ Invite a friend</button></div><div class="panel glass chat"><div class="panel-title">Room chat</div><div id="messages" class="messages"></div><form id="chatForm" class="chat-form"><input id="chatInput" maxlength="500" placeholder="Say something…"><button>↑</button></form></div></aside></section></main>
 <div id="inviteModal" class="modal hidden"><div class="modal-card glass"><button class="x" data-close>×</button><div class="eyebrow">INVITE</div><h2>Bring someone in.</h2><input id="userSearch" placeholder="Search username…"><div id="userResults" class="user-results"></div></div></div><div id="incoming" class="modal hidden"><div class="modal-card glass"><div class="invite-icon">🔴</div><div class="eyebrow">ROOM INVITATION</div><h2 id="inviteTitle">Someone invited you</h2><p id="inviteText"></p><div class="hero-actions"><button id="decline" class="secondary">Decline</button><button id="accept" class="primary">Accept & join</button></div></div></div><div id="invitationsModal" class="modal hidden"><div class="modal-card glass"><button class="x" data-close>×</button><div class="eyebrow">INBOX</div><h2>Room invitations</h2><p>Accept an invitation to join instantly, or decline it.</p><div id="invitations" class="invitations"></div></div></div><div id="toast" class="toast"></div>
-<script src="/room/ws-guard.js?v=20260826" defer></script>
-<script src="/room/app.js?v=20260826" defer></script>
-<script src="/room/runtime-fix.js?v=20260827" defer></script>
-<script src="/room/final-client.js?v=20260827" defer></script>
+<script src="/room/app.js?v=20260828" defer></script>
+<script src="/room/runtime-fix.js?v=20260828" defer></script>
 </body></html>

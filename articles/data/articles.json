@@ -1,8 +1,27 @@
 {
   "contentLanguage": "fa-IR",
   "direction": "rtl",
-  "version": 3,
+  "version": 4,
   "articles": [
+    {
+      "id": "what-is-ai",
+      "slug": "what-is-ai",
+      "title": "هوش مصنوعی چیست؟ راهنمای ساده و کامل برای مبتدی‌ها",
+      "description": "هوش مصنوعی چیست؟ در این راهنمای ساده با مفهوم AI، نحوه کار، کاربردها، محدودیت‌ها و روش استفاده درست از هوش مصنوعی آشنا شوید.",
+      "category": "ai",
+      "cluster": "ai-basics",
+      "intent": "informational",
+      "tags": ["هوش مصنوعی", "AI", "آموزش هوش مصنوعی", "مبانی هوش مصنوعی"],
+      "keywords": ["هوش مصنوعی چیست", "AI چیست", "تعریف هوش مصنوعی", "کاربرد هوش مصنوعی"],
+      "author": "Redlighte",
+      "publishedAt": "2026-08-29",
+      "updatedAt": "2026-08-29",
+      "readingTime": 7,
+      "url": "/articles/what-is-ai/",
+      "status": "published",
+      "pillar": true,
+      "related": ["what-is-generative-ai"]
+    },
     {
       "id": "what-is-generative-ai",
       "slug": "what-is-generative-ai",
@@ -19,7 +38,8 @@
       "readingTime": 6,
       "url": "/articles/what-is-generative-ai/",
       "status": "published",
-      "related": []
+      "pillar": true,
+      "related": ["what-is-ai"]
     }
   ]
 }

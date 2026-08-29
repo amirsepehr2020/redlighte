@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#080808">
+  <meta name="description" content="Redlighte Agents — create your own AI assistants with personality, instructions and memory.">
+  <title>Redlighte Agents</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/agents/style.css">
+</head>
+<body>
+  <div class="orb orb-a"></div><div class="orb orb-b"></div>
+  <header class="topbar">
+    <button class="brand" id="homeBtn" aria-label="Back to Redlighte"><span class="brand-mark"><i></i></span><span>Redlighte</span></button>
+    <div class="top-actions"><button class="ghost" id="themeBtn" aria-label="Toggle theme">◐</button><button class="primary small" id="createTop">＋ Create agent</button></div>
+  </header>
+
+  <main class="page">
+    <section class="hero">
+      <div class="eyebrow">REDLIGHTE AGENTS</div>
+      <h1>Build an AI that feels like <span>yours.</span></h1>
+      <p>Create focused AI agents with their own identity, instructions, tools and memory — without changing your main Redlighte experience.</p>
+      <div class="hero-actions"><button class="primary" id="createHero">Create your first agent <b>→</b></button><button class="secondary" id="learnBtn">How it works</button></div>
+    </section>
+
+    <section class="workspace" aria-label="Agents workspace">
+      <aside class="agent-list">
+        <div class="list-head"><div><span class="muted">YOUR</span><h2>Agents</h2></div><button class="icon" id="createSide" aria-label="Create agent">＋</button></div>
+        <div id="agentList" class="agents"></div>
+        <div id="emptyState" class="empty">No agents yet.<br><button id="emptyCreate">Create one →</button></div>
+      </aside>
+
+      <section class="editor" id="editor">
+        <div class="editor-empty" id="editorEmpty"><div class="big-icon">✦</div><h2>Your agent workspace</h2><p>Choose an agent or create a new one to start designing it.</p></div>
+        <div id="editorContent" hidden>
+          <div class="editor-head"><div><span class="muted">AGENT BUILDER</span><h2 id="editorTitle">New agent</h2></div><div class="head-actions"><button class="secondary danger" id="deleteAgent">Delete</button><button class="primary" id="saveAgent">Save agent</button></div></div>
+          <div class="form-grid">
+            <label>Agent name<input id="agentName" maxlength="40" placeholder="e.g. Code Mentor"></label>
+            <label>Icon<select id="agentIcon"><option>✦</option><option>🧠</option><option>💻</option><option>🎨</option><option>📚</option><option>🚀</option><option>🔬</option><option>🛠️</option></select></label>
+          </div>
+          <label>Short description<input id="agentDescription" maxlength="120" placeholder="What is this agent best at?"></label>
+          <label>Instructions<textarea id="agentInstructions" rows="8" maxlength="8000" placeholder="Tell your agent who it is, what it should do, its tone, boundaries and how it should respond..."></textarea></label>
+          <div class="section-title"><span>Capabilities</span><small>Configure what this agent is designed to do.</small></div>
+          <div class="caps">
+            <button class="cap active" data-cap="memory"><b>🧠</b><span><strong>Memory</strong><small>Remember useful context</small></span><i>✓</i></button>
+            <button class="cap" data-cap="web"><b>🌐</b><span><strong>Web-aware</strong><small>Designed for current information</small></span><i>✓</i></button>
+            <button class="cap" data-cap="code"><b>⌘</b><span><strong>Code</strong><small>Programming-focused behavior</small></span><i>✓</i></button>
+          </div>
+          <div class="preview"><div class="preview-head"><span>LIVE PREVIEW</span><button id="openChat">Open agent →</button></div><div class="preview-card"><div class="avatar" id="previewIcon">✦</div><div><strong id="previewName">Your agent</strong><p id="previewDescription">A custom Redlighte AI agent.</p></div></div></div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <div class="modal" id="howModal" hidden><div class="backdrop"></div><div class="modal-card"><button class="close" id="closeHow">×</button><div class="big-icon">✦</div><h2>How Agents work</h2><p>An Agent is a reusable AI identity. You define its purpose and instructions, then Redlighte sends those instructions as the agent's behavior when you chat with it.</p><div class="steps"><div><b>01</b><span>Define its identity</span></div><div><b>02</b><span>Choose capabilities</span></div><div><b>03</b><span>Save and chat</span></div></div><button class="primary full" id="modalCreate">Create an agent</button></div></div>
+  <div class="toast" id="toast"></div>
+  <script src="/agents/app.js"></script>
+</body>
+</html>

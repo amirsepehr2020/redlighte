@@ -1,1 +1,46 @@
-{"version":1,"clusters":[{"slug":"generative-ai","pillar":"what-is-generative-ai","supportingArticles":[],"status":"seed"},{"slug":"ai-tools","pillar":null,"supportingArticles":[],"status":"planned"},{"slug":"prompt-engineering","pillar":null,"supportingArticles":[],"status":"planned"},{"slug":"redlighte-guides","pillar":null,"supportingArticles":[],"status":"planned"}]}
+{
+  "version": 2,
+  "clusters": [
+    {
+      "id": "generative-ai",
+      "name": "Generative AI",
+      "pillar": "what-is-generative-ai",
+      "intent": "informational",
+      "status": "active",
+      "supportingArticles": [],
+      "nextTopics": [
+        "how-generative-ai-works",
+        "generative-ai-use-cases",
+        "generative-ai-vs-traditional-ai",
+        "best-generative-ai-tools"
+      ]
+    },
+    {
+      "id": "ai-tools",
+      "name": "AI Tools",
+      "pillar": null,
+      "intent": "commercial-investigational",
+      "status": "planned",
+      "supportingArticles": [],
+      "nextTopics": []
+    },
+    {
+      "id": "prompt-engineering",
+      "name": "Prompt Engineering",
+      "pillar": null,
+      "intent": "informational",
+      "status": "planned",
+      "supportingArticles": [],
+      "nextTopics": []
+    },
+    {
+      "id": "redlighte-guides",
+      "name": "Redlighte Guides",
+      "pillar": null,
+      "intent": "informational",
+      "status": "planned",
+      "supportingArticles": [],
+      "nextTopics": []
+    }
+  ]
+}

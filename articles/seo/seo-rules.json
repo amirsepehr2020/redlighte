@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "title": { "min": 30, "max": 65 },
+  "description": { "min": 70, "max": 165 },
+  "tags": { "min": 2, "max": 8 },
+  "requirements": [
+    "one clear H1",
+    "descriptive canonical URL",
+    "Article JSON-LD",
+    "published and modified dates",
+    "at least two useful internal links when relevant",
+    "no keyword stuffing",
+    "noindex drafts and archived pages",
+    "only index category pages with useful content"
+  ]
+}

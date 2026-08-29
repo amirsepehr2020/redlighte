@@ -1,25 +1,42 @@
-# Redlighte Articles SEO Engine
+# Redlighte Articles — SEO Engine
+
+## Quality gates
+
+Every published article should have a unique title, useful description, clean slug, canonical URL, author, publish/update dates, reading time, category, tags, and Article JSON-LD.
+
+## Topic authority
+
+Articles belong to a category and, when appropriate, a topic cluster. Pillar topics should link to supporting articles and supporting articles should link back to the pillar when the relationship is genuinely useful.
+
+## Internal linking
+
+Prefer contextual links inside the article. Use the related-article area for additional discovery. Never add links only to manipulate rankings.
+
+## Indexing rules
+
+- Published, useful articles: index.
+- Draft or archived content: noindex and exclude from sitemap.
+- Empty or near-empty category pages: do not index until they provide standalone value.
+
+## SEO validator
+
+Run the validator from the repository root:
+
+```bash
+node articles/seo/validate.mjs
+```
+
+The validator checks the published registry metadata and fails when an article falls below the publishing quality threshold.
 
 ## Publishing checklist
 
-- One stable canonical URL per published article.
-- One descriptive H1.
-- A useful, unique title and meta description.
-- Article JSON-LD with headline, description, dates, author, publisher, image, and mainEntityOfPage.
-- Add meaningful internal links to relevant articles and Redlighte pages.
-- Add related articles when they genuinely help the reader.
-- Keep drafts out of the sitemap.
-- Update `dateModified` after substantial edits.
-- Avoid keyword stuffing, doorway pages, and thin content.
-
-## Topic-cluster strategy
-
-Build clusters around a clear search intent. Each cluster should have a useful pillar article plus supporting articles that answer narrower questions. Supporting articles should link to the pillar and to closely related pages; the pillar should link back to the strongest supporting pages.
-
-## Content quality
-
-Articles should be written for people first: answer the query directly, explain concepts clearly, use descriptive headings, and add original value. SEO metadata should describe the page accurately rather than manipulate rankings.
-
-## Future automation
-
-The registry in `articles/data/articles.json` is the source of truth for discovery metadata. A future build/deploy step can validate published entries, generate sitemap entries, check canonical URLs, detect duplicate slugs, and calculate a basic SEO completeness score without changing the runtime article layout.
+1. Pick a search-intent-driven topic.
+2. Assign the correct category and cluster.
+3. Write a descriptive title and meta description.
+4. Use one H1 and a logical H2/H3 hierarchy.
+5. Add useful internal links where relevant.
+6. Add or update Article JSON-LD.
+7. Verify canonical URL and dates.
+8. Run the SEO validator.
+9. Add the published URL to the sitemap.
+10. Review the rendered page on mobile before publishing.

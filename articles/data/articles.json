@@ -1,15 +1,18 @@
 {
-  "version": 2,
+  "contentLanguage": "fa-IR",
+  "direction": "rtl",
+  "version": 3,
   "articles": [
     {
       "id": "what-is-generative-ai",
       "slug": "what-is-generative-ai",
-      "title": "What Is Generative AI? A Clear Guide for Beginners",
-      "description": "Understand how generative AI works, what it can create, and where it fits into everyday work and creativity.",
+      "title": "هوش مصنوعی مولد چیست؟ راهنمای ساده برای شروع",
+      "description": "هوش مصنوعی مولد چیست، چگونه کار می‌کند و چه کاربردهایی در زندگی، یادگیری و کار دارد؟ یک راهنمای ساده و کاربردی برای شروع.",
       "category": "ai",
       "cluster": "generative-ai",
-      "tags": ["generative ai", "artificial intelligence", "ai guide"],
-      "keywords": ["what is generative ai", "generative artificial intelligence", "how generative ai works"],
+      "intent": "informational",
+      "tags": ["هوش مصنوعی", "هوش مصنوعی مولد", "AI", "آموزش هوش مصنوعی"],
+      "keywords": ["هوش مصنوعی چیست", "هوش مصنوعی مولد چیست", "هوش مصنوعی مولد", "کاربرد هوش مصنوعی", "generative ai چیست"],
       "author": "Redlighte",
       "publishedAt": "2026-08-29",
       "updatedAt": "2026-08-29",

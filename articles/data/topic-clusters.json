@@ -1,9 +1,11 @@
 {
-  "version": 2,
+  "contentLanguage": "fa-IR",
+  "direction": "rtl",
+  "version": 3,
   "clusters": [
     {
       "id": "generative-ai",
-      "name": "Generative AI",
+      "name": "هوش مصنوعی مولد",
       "pillar": "what-is-generative-ai",
       "intent": "informational",
       "status": "active",
@@ -17,7 +19,7 @@
     },
     {
       "id": "ai-tools",
-      "name": "AI Tools",
+      "name": "ابزارهای هوش مصنوعی",
       "pillar": null,
       "intent": "commercial-investigational",
       "status": "planned",
@@ -26,7 +28,7 @@
     },
     {
       "id": "prompt-engineering",
-      "name": "Prompt Engineering",
+      "name": "مهندسی پرامپت",
       "pillar": null,
       "intent": "informational",
       "status": "planned",
@@ -35,7 +37,7 @@
     },
     {
       "id": "redlighte-guides",
-      "name": "Redlighte Guides",
+      "name": "راهنماهای ردلایت",
       "pillar": null,
       "intent": "informational",
       "status": "planned",

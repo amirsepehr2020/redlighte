@@ -1,42 +1,51 @@
-# Redlighte Articles — SEO Engine
+# Redlighte Articles — موتور محتوای فارسی و SEO
+
+## زبان و تجربه کاربری
+
+مخاطب اصلی Redlighte فارسی‌زبان و ایرانی است. تمام محتوای اصلی Articles باید با `lang="fa"` و `dir="rtl"`، نگارش طبیعی فارسی، واژگان قابل جستجو در فارسی و تجربه خواندن موبایل‌محور منتشر شود.
 
 ## Quality gates
 
-Every published article should have a unique title, useful description, clean slug, canonical URL, author, publish/update dates, reading time, category, tags, and Article JSON-LD.
+هر مقاله منتشرشده باید عنوان یکتا، توضیح مفید، slug پایدار، canonical، نویسنده، تاریخ انتشار/به‌روزرسانی، زمان مطالعه، دسته‌بندی، برچسب‌ها و Article JSON-LD داشته باشد.
+
+## Search intent
+
+هر مقاله باید یک هدف جستجوی مشخص داشته باشد: اطلاعاتی، آموزشی، مقایسه‌ای یا حل مسئله. Keywordها از زبان واقعی کاربران فارسی‌زبان استخراج و طبیعی استفاده شوند؛ keyword stuffing ممنوع است.
 
 ## Topic authority
 
-Articles belong to a category and, when appropriate, a topic cluster. Pillar topics should link to supporting articles and supporting articles should link back to the pillar when the relationship is genuinely useful.
+مقالات به دسته و در صورت نیاز به topic cluster متصل می‌شوند. مقاله ستون اصلی باید به مقالات پشتیبان مرتبط لینک بدهد و مقالات پشتیبان نیز در صورت مفید بودن به ستون اصلی برگردند.
 
 ## Internal linking
 
-Prefer contextual links inside the article. Use the related-article area for additional discovery. Never add links only to manipulate rankings.
+لینک داخلی باید در متن و بر اساس ارتباط واقعی قرار بگیرد. بخش مقالات مرتبط برای کشف محتوای بیشتر است و نباید فقط برای دستکاری رتبه ساخته شود.
 
 ## Indexing rules
 
-- Published, useful articles: index.
-- Draft or archived content: noindex and exclude from sitemap.
-- Empty or near-empty category pages: do not index until they provide standalone value.
+- مقاله منتشرشده و مفید: index.
+- Draft یا archived: noindex و خارج از sitemap.
+- دسته‌بندی کم‌محتوا: تا زمان ایجاد ارزش مستقل index نشود.
 
 ## SEO validator
 
-Run the validator from the repository root:
+از ریشه ریپو اجرا شود:
 
 ```bash
 node articles/seo/validate.mjs
 ```
 
-The validator checks the published registry metadata and fails when an article falls below the publishing quality threshold.
+Validator متادیتای Registry را بررسی می‌کند و در صورت پایین بودن کیفیت انتشار خطا می‌دهد.
 
 ## Publishing checklist
 
-1. Pick a search-intent-driven topic.
-2. Assign the correct category and cluster.
-3. Write a descriptive title and meta description.
-4. Use one H1 and a logical H2/H3 hierarchy.
-5. Add useful internal links where relevant.
-6. Add or update Article JSON-LD.
-7. Verify canonical URL and dates.
-8. Run the SEO validator.
-9. Add the published URL to the sitemap.
-10. Review the rendered page on mobile before publishing.
+1. یک موضوع با Search Intent مشخص انتخاب کن.
+2. موضوع را به دسته و Cluster درست وصل کن.
+3. عنوان و Meta Description طبیعی و فارسی بنویس.
+4. فقط یک H1 و ساختار منطقی H2/H3 داشته باش.
+5. لینک‌های داخلی واقعاً مرتبط اضافه کن.
+6. Article JSON-LD را کامل کن.
+7. canonical و تاریخ‌ها را بررسی کن.
+8. Validator را اجرا کن.
+9. URL منتشرشده را در sitemap قرار بده.
+10. صفحه را روی موبایل بررسی کن.
+11. مطمئن شو مقاله برای انسان مفید است، نه صرفاً برای موتور جستجو.

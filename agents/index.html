@@ -8,6 +8,7 @@
   <title>Redlighte Agents</title>
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/agents/style.css">
+  <style>body{visibility:hidden}body.agents-ready{visibility:visible}</style>
 </head>
 <body>
   <div class="orb orb-a"></div><div class="orb orb-b"></div>
@@ -55,6 +56,9 @@
 
   <div class="modal" id="howModal" hidden><div class="backdrop"></div><div class="modal-card"><button class="close" id="closeHow">×</button><div class="big-icon">✦</div><h2>How Agents work</h2><p>An Agent is a reusable AI identity. You define its purpose and instructions, then Redlighte sends those instructions as the agent's behavior when you chat with it.</p><div class="steps"><div><b>01</b><span>Define its identity</span></div><div><b>02</b><span>Choose capabilities</span></div><div><b>03</b><span>Save and chat</span></div></div><button class="primary full" id="modalCreate">Create an agent</button></div></div>
   <div class="toast" id="toast"></div>
+  <script>
+    (async()=>{try{const r=await fetch('/api/account/data',{credentials:'include',cache:'no-store'});if(!r.ok){window.location.replace('/');return;}document.body.classList.add('agents-ready')}catch(e){window.location.replace('/')}})();
+  </script>
   <script src="/agents/app.js"></script>
 </body>
 </html>

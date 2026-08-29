@@ -1,7 +1,7 @@
 {
   "contentLanguage": "fa-IR",
   "direction": "rtl",
-  "version": 4,
+  "version": 5,
   "articles": [
     {
       "id": "what-is-ai",
@@ -20,7 +20,7 @@
       "url": "/articles/what-is-ai/",
       "status": "published",
       "pillar": true,
-      "related": ["what-is-generative-ai"]
+      "related": ["what-is-generative-ai", "what-is-a-prompt"]
     },
     {
       "id": "what-is-generative-ai",
@@ -31,7 +31,7 @@
       "cluster": "generative-ai",
       "intent": "informational",
       "tags": ["هوش مصنوعی", "هوش مصنوعی مولد", "AI", "آموزش هوش مصنوعی"],
-      "keywords": ["هوش مصنوعی چیست", "هوش مصنوعی مولد چیست", "هوش مصنوعی مولد", "کاربرد هوش مصنوعی", "generative ai چیست"],
+      "keywords": ["هوش مصنوعی مولد چیست", "هوش مصنوعی مولد", "کاربرد هوش مصنوعی", "generative ai چیست"],
       "author": "Redlighte",
       "publishedAt": "2026-08-29",
       "updatedAt": "2026-08-29",
@@ -39,7 +39,64 @@
       "url": "/articles/what-is-generative-ai/",
       "status": "published",
       "pillar": true,
-      "related": ["what-is-ai"]
+      "related": ["what-is-ai", "what-is-a-prompt"]
+    },
+    {
+      "id": "what-is-a-prompt",
+      "slug": "what-is-a-prompt",
+      "title": "پرامپت چیست؟ راهنمای ساده برای شروع",
+      "description": "پرامپت چیست؟ در این راهنمای ساده با مفهوم Prompt، اجزای یک درخواست خوب و نقش آن در گرفتن پاسخ بهتر از هوش مصنوعی آشنا شوید.",
+      "category": "ai",
+      "cluster": "prompt-engineering",
+      "intent": "informational",
+      "tags": ["پرامپت", "Prompt", "پرامپت نویسی", "هوش مصنوعی"],
+      "keywords": ["پرامپت چیست", "Prompt چیست", "پرامپت نویسی چیست", "معنی پرامپت"],
+      "author": "Redlighte",
+      "publishedAt": "2026-08-29",
+      "updatedAt": "2026-08-29",
+      "readingTime": 5,
+      "url": "/articles/what-is-a-prompt/",
+      "status": "published",
+      "pillar": true,
+      "related": ["how-to-write-a-good-prompt", "what-is-ai"]
+    },
+    {
+      "id": "how-to-write-a-good-prompt",
+      "slug": "how-to-write-a-good-prompt",
+      "title": "چگونه یک پرامپت خوب بنویسیم؟ راهنمای عملی",
+      "description": "چگونه یک پرامپت خوب بنویسیم؟ با چند اصل ساده برای مشخص کردن هدف، زمینه، لحن و قالب خروجی، پاسخ‌های دقیق‌تری از هوش مصنوعی بگیرید.",
+      "category": "ai",
+      "cluster": "prompt-engineering",
+      "intent": "informational",
+      "tags": ["پرامپت", "پرامپت نویسی", "Prompt Engineering", "هوش مصنوعی"],
+      "keywords": ["چگونه پرامپت خوب بنویسیم", "آموزش پرامپت نویسی", "نوشتن پرامپت", "پرامپت حرفه ای"],
+      "author": "Redlighte",
+      "publishedAt": "2026-08-29",
+      "updatedAt": "2026-08-29",
+      "readingTime": 7,
+      "url": "/articles/how-to-write-a-good-prompt/",
+      "status": "published",
+      "pillar": false,
+      "related": ["what-is-a-prompt", "best-free-ai-tools"]
+    },
+    {
+      "id": "best-free-ai-tools",
+      "slug": "best-free-ai-tools",
+      "title": "بهترین ابزارهای هوش مصنوعی رایگان؛ راهنمای انتخاب",
+      "description": "بهترین ابزارهای هوش مصنوعی رایگان را بشناسید؛ از چت و تحقیق تا نوشتن، ایده‌پردازی و کارهای روزمره. معیارهای انتخاب ابزار مناسب را هم بررسی می‌کنیم.",
+      "category": "ai",
+      "cluster": "ai-tools",
+      "intent": "commercial-investigation",
+      "tags": ["ابزار هوش مصنوعی", "AI", "ابزار رایگان", "هوش مصنوعی رایگان"],
+      "keywords": ["بهترین ابزارهای هوش مصنوعی رایگان", "ابزار AI رایگان", "سایت هوش مصنوعی رایگان", "هوش مصنوعی رایگان"],
+      "author": "Redlighte",
+      "publishedAt": "2026-08-29",
+      "updatedAt": "2026-08-29",
+      "readingTime": 8,
+      "url": "/articles/best-free-ai-tools/",
+      "status": "published",
+      "pillar": true,
+      "related": ["what-is-a-prompt", "how-to-write-a-good-prompt", "what-is-ai"]
     }
   ]
 }

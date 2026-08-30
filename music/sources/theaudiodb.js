@@ -1,14 +1,5 @@
-const API_ROOT = 'https://www.theaudiodb.com/api/v1/json';
-const DEFAULT_KEY = '123';
-export async function searchTheAudioDB(term, limit = 20, apiKey = DEFAULT_KEY) {
-  const key = apiKey || DEFAULT_KEY;
-  const url = `${API_ROOT}/${encodeURIComponent(key)}/search.php?s=${encodeURIComponent(term)}`;
-  const response = await fetch(url, { headers: { Accept: 'application/json' } });
-  if (!response.ok) throw new Error(`TheAudioDB returned ${response.status}`);
-  return normalize(await response.json(), limit);
-}
-function normalize(data = {}, limit = 20) {
-  const artists = (data.artists || []).slice(0, limit).map(a => ({ id:`theaudiodb:${a.idArtist}`, name:a.strArtist||'', slug:slug(a.strArtist), bio:a.strBiographyEN||'', image_url:a.strArtistThumb||a.strArtistFanart||null, country:a.strCountry||null }));
-  return { artists, albums: [], songs: [] };
-}
+const API_ROOT='https://www.theaudiodb.com/api/v1/json';
+const DEFAULT_KEY='123';
+export async function searchTheAudioDB(term,limit=20,apiKey=DEFAULT_KEY){const key=apiKey||DEFAULT_KEY;const q=encodeURIComponent(String(term||''));const endpoints=[`/${key}/search.php?s=${q}`,`/${key}/searchtrack.php?s=${q}`,`/${key}/searchalbum.php?s=${q}`];const responses=await Promise.allSettled(endpoints.map(path=>fetch(API_ROOT+path,{headers:{Accept:'application/json'}})));const payloads=await Promise.all(responses.map(async r=>r.status==='fulfilled'&&r.value.ok?r.value.json():({})));return normalize(payloads,limit);}
+function normalize([artistsPayload={},tracksPayload={},albumsPayload={}],limit=20){const n=Math.min(Math.max(Number(limit)||20,1),50);const artists=(artistsPayload.artists||[]).slice(0,n).map(a=>({id:`theaudiodb:${a.idArtist}`,name:a.strArtist||'',slug:slug(a.strArtist),bio:a.strBiographyEN||'',image_url:a.strArtistThumb||a.strArtistFanart||null,country:a.strCountry||null,provider:'theaudiodb',page_url:a.strWebsite?`https://${a.strWebsite.replace(/^https?:\/\//,'')}`:null}));const songs=(tracksPayload.track||[]).slice(0,n).map(t=>({id:`theaudiodb:${t.idTrack}`,title:t.strTrack||'',slug:slug(t.strTrack),artist_id:t.idArtist?`theaudiodb:${t.idArtist}`:null,artist_name:t.strArtist||'',album_id:t.idAlbum?`theaudiodb:${t.idAlbum}`:null,album_name:t.strAlbum||'',duration:t.intDuration?Math.round(Number(t.intDuration)/1000):null,release_date:t.intYearReleased?String(t.intYearReleased):null,cover_url:t.strTrackThumb||t.strAlbumThumb||null,provider:'theaudiodb',page_url:t.strMusicBrainzID?`https://musicbrainz.org/recording/${t.strMusicBrainzID}`:null}));const albums=(albumsPayload.album||[]).slice(0,n).map(a=>({id:`theaudiodb:${a.idAlbum}`,title:a.strAlbum||'',slug:slug(a.strAlbum),artist_id:a.idArtist?`theaudiodb:${a.idArtist}`:null,artist_name:a.strArtist||'',release_date:a.intYearReleased?String(a.intYearReleased):null,cover_url:a.strAlbumThumb||a.strAlbumThumbHQ||a.strAlbumCDart||null,provider:'theaudiodb'}));return{artists,albums,songs,sources:['theaudiodb']};}
 function slug(value){return String(value||'').trim().toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]+/gi,'-').replace(/^-|-$/g,'');}

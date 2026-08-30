@@ -13,9 +13,15 @@ export async function upsertCatalog(env, data) {
 
 export async function searchStored(env,q,limit=25){
   if(!hasDb(env)) return null;
-  const safe=String(q||'').replace(/[%_]/g,''); const like=`%${safe}%`;
-  const rows=await env.MUSIC_DB.prepare('SELECT s.id,s.title,s.slug,s.artist_id,s.album_id,s.duration,s.release_date,a.name AS artist_name,al.title AS album_name,al.cover_url FROM songs s LEFT JOIN artists a ON a.id=s.artist_id LEFT JOIN albums al ON al.id=s.album_id WHERE s.title LIKE ? OR a.name LIKE ? OR al.title LIKE ? ORDER BY s.play_count DESC,s.title LIMIT ?').bind(like,like,like,Math.min(Math.max(Number(limit)||25,1),100)).all();
-  return {songs:rows.results||[],artists:[],albums:[],sources:['redlighte-db']};
+  const safe=String(q||'').replace(/[%_]/g,'').trim(); if(!safe)return {songs:[],artists:[],albums:[],sources:['redlighte-db']};
+  const like=`%${safe}%`;
+  const n=Math.min(Math.max(Number(limit)||25,1),100);
+  const [songRows,artistRows,albumRows]=await Promise.all([
+    env.MUSIC_DB.prepare('SELECT s.id,s.title,s.slug,s.artist_id,s.album_id,s.duration,s.release_date,a.name AS artist_name,al.title AS album_name,al.cover_url FROM songs s LEFT JOIN artists a ON a.id=s.artist_id LEFT JOIN albums al ON al.id=s.album_id WHERE s.title LIKE ? OR a.name LIKE ? OR al.title LIKE ? ORDER BY s.play_count DESC,s.title LIMIT ?').bind(like,like,like,n).all(),
+    env.MUSIC_DB.prepare('SELECT id,name,slug,bio,image_url,country FROM artists WHERE name LIKE ? ORDER BY name LIMIT ?').bind(like,n).all(),
+    env.MUSIC_DB.prepare('SELECT al.id,al.title,al.slug,al.artist_id,al.release_date,al.cover_url,a.name AS artist_name FROM albums al LEFT JOIN artists a ON a.id=al.artist_id WHERE al.title LIKE ? OR a.name LIKE ? ORDER BY al.release_date DESC,al.title LIMIT ?').bind(like,like,n).all()
+  ]);
+  return {songs:songRows.results||[],artists:artistRows.results||[],albums:albumRows.results||[],sources:['redlighte-db']};
 }
 
 export async function getStored(env,type,id){

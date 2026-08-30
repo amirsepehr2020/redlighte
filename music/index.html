@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Redlighte Music — discover songs, artists and albums.">
+  <meta name="theme-color" content="#ff1744">
+  <title>Redlighte Music</title>
+  <link rel="stylesheet" href="/music/music.css">
+</head>
+<body>
+  <main class="music-app">
+    <header class="music-header">
+      <a class="brand" href="/">REDLIGHTE <span>MUSIC</span></a>
+      <a class="back" href="/">Redlighte</a>
+    </header>
+
+    <section class="hero">
+      <p class="eyebrow">REDLIGHTE MUSIC</p>
+      <h1>Your music, beautifully organized.</h1>
+      <p class="hero-copy">Search songs, artists and albums from the Redlighte music catalog.</p>
+      <form id="music-search" class="search" autocomplete="off">
+        <input id="search-input" type="search" placeholder="Search songs, artists, albums…" aria-label="Search music">
+        <button type="submit">Search</button>
+      </form>
+    </section>
+
+    <section id="results" class="section" aria-live="polite">
+      <div class="section-heading"><h2>Latest Music</h2><a href="/music/latest">View all</a></div>
+      <div id="song-grid" class="song-grid"></div>
+    </section>
+  </main>
+  <div id="player" class="player" hidden>
+    <img id="player-cover" alt="">
+    <div class="player-meta"><strong id="player-title"></strong><span id="player-artist"></span></div>
+    <audio id="audio" controls preload="none"></audio>
+  </div>
+  <script src="/music/music.js" defer></script>
+</body>
+</html>

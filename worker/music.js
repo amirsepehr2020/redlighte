@@ -1,8 +1,10 @@
 import { searchCatalog } from '../music/catalog-service.js';
+import { syncTerm } from '../music/sync.js';
 const JSON_HEADERS={'Content-Type':'application/json; charset=utf-8','Cache-Control':'public, max-age=60, s-maxage=300'};
 export default async function handleMusic(request,env,url){
   const path=url.pathname;
   if(path==='/api/music/search')return search(request,env,url.searchParams.get('q')||'');
+  if(path==='/api/music/sync')return sync(request,env,url.searchParams.get('q')||'');
   if(path==='/api/music/latest')return catalog(request,env,'latest');
   const match=path.match(/^\/api\/music\/(song|artist|album)\/([^/]+)$/); if(match)return catalog(request,env,match[1],match[2]);
   const stream=path.match(/^\/api\/music\/stream\/([^/]+)$/); if(stream)return mediaProxy(request,env,stream[1],'audio');
@@ -12,6 +14,10 @@ export default async function handleMusic(request,env,url){
 async function search(request,env,q){
   if(!q.trim())return json({songs:[],artists:[],albums:[],sources:[]},200);
   try{return json(await searchCatalog(env,q),200);}catch(error){console.error('MUSIC_SEARCH_ERROR',error);return json({error:'Music search unavailable.'},502);}
+}
+async function sync(request,env,q){
+  if(!q.trim())return json({error:'Query is required.'},400);
+  try{return json(await syncTerm(q,env),200);}catch(error){console.error('MUSIC_SYNC_ERROR',error);return json({error:'Music sync unavailable.'},502);}
 }
 async function catalog(request,env,type,value=''){
   const base=env.MUSIC_SOURCE_API;

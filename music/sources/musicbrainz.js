@@ -1,14 +1,5 @@
-const API_ROOT = 'https://musicbrainz.org/ws/2';
-export async function searchMusicBrainz(term, limit = 25) {
-  const url = new URL(`${API_ROOT}/recording`);
-  url.searchParams.set('query', term); url.searchParams.set('fmt', 'json');
-  url.searchParams.set('limit', String(Math.min(Math.max(Number(limit) || 25, 1), 25)));
-  const response = await fetch(url, { headers: { Accept: 'application/json', 'User-Agent': 'Redlighte-Music/1.0 (https://redlighte.ir)' } });
-  if (!response.ok) throw new Error(`MusicBrainz returned ${response.status}`);
-  return normalize(await response.json());
-}
-function normalize(payload = {}) {
-  const songs = (payload.recordings || []).map(item => { const artist=item['artist-credit']?.[0]?.artist; const release=item.releases?.[0]; return { id:`musicbrainz:${item.id}`, title:item.title||'', slug:slug(item.title), artist_id:artist?.id?`musicbrainz:${artist.id}`:null, artist_name:artist?.name||'', album_id:release?.id?`musicbrainz:${release.id}`:null, album_name:release?.title||'', duration:item.length?Math.round(item.length/1000):null, release_date:release?.date||null, provider:'musicbrainz', page_url:`https://musicbrainz.org/recording/${item.id}` }; });
-  return { songs, artists: [], albums: [] };
-}
+const API_ROOT='https://musicbrainz.org/ws/2';
+const COVER_ROOT='https://coverartarchive.org/release/';
+export async function searchMusicBrainz(term,limit=25){const url=new URL(`${API_ROOT}/recording`);url.searchParams.set('query',term);url.searchParams.set('fmt','json');url.searchParams.set('limit',String(Math.min(Math.max(Number(limit)||25,1),25)));const response=await fetch(url,{headers:{Accept:'application/json','User-Agent':'Redlighte-Music/1.0 (https://redlighte.ir)'}});if(!response.ok)throw new Error(`MusicBrainz returned ${response.status}`);return normalize(await response.json());}
+function normalize(payload={}){const songs=(payload.recordings||[]).map(item=>{const artist=item['artist-credit']?.[0]?.artist;const release=item.releases?.[0];const releaseId=release?.id||null;return{id:`musicbrainz:${item.id}`,title:item.title||'',slug:slug(item.title),artist_id:artist?.id?`musicbrainz:${artist.id}`:null,artist_name:artist?.name||'',album_id:releaseId?`musicbrainz:${releaseId}`:null,album_name:release?.title||'',duration:item.length?Math.round(item.length/1000):null,release_date:release?.date||null,provider:'musicbrainz',page_url:`https://musicbrainz.org/recording/${item.id}`,cover_url:releaseId?`${COVER_ROOT}${releaseId}/front-250`:null,audio_url:null};});return{songs,artists:[],albums:[]};}
 function slug(value){return String(value||'').trim().toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]+/gi,'-').replace(/^-|-$/g,'');}

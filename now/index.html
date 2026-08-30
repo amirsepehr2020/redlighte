@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#080808">
+<meta name="description" content="Redlighte Now — a live view of what is happening around Redlighte.">
+<title>Redlighte Now</title>
+<style>
+:root{color-scheme:dark;--bg:#080808;--surface:rgba(255,255,255,.055);--surface2:rgba(255,255,255,.075);--line:rgba(255,255,255,.11);--text:#f7f7f7;--dim:#9b9b9b;--red:#ff3030;--red2:#ff5a5a;--redSoft:rgba(255,48,48,.12);--ease:cubic-bezier(.2,.8,.2,1)}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}body{overflow-x:hidden}.ambient{position:fixed;inset:-20%;pointer-events:none;background:radial-gradient(circle at 50% 12%,rgba(255,48,48,.16),transparent 28%),radial-gradient(circle at 80% 60%,rgba(255,48,48,.07),transparent 30%);filter:blur(30px)}
+.shell{position:relative;width:min(1040px,100%);margin:auto;padding:22px 18px 44px}.top{display:flex;align-items:center;justify-content:space-between;gap:14px}.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:-.02em}.mark{width:30px;height:30px;border-radius:10px;background:var(--red);display:grid;place-items:center;box-shadow:0 0 30px rgba(255,48,48,.22)}.mark:after{content:"";width:10px;height:10px;border-radius:50%;background:#fff}.back{color:var(--text);text-decoration:none;border:1px solid var(--line);background:var(--surface);padding:9px 13px;border-radius:999px;font-size:12px;font-weight:700;backdrop-filter:blur(18px)}
+.hero{padding:72px 0 34px}.eyebrow{color:var(--red2);font-size:11px;font-weight:800;letter-spacing:.16em}.hero h1{font-size:clamp(42px,8vw,78px);line-height:.95;letter-spacing:-.065em;margin:12px 0}.hero p{color:var(--dim);font-size:15px;max-width:600px;line-height:1.7}.live{display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(255,48,48,.28);background:var(--redSoft);color:var(--red2);padding:7px 10px;border-radius:999px;font-size:10px;font-weight:800}.dot{width:7px;height:7px;background:var(--red);border-radius:50%;box-shadow:0 0 12px var(--red);animation:pulse 1.5s infinite}@keyframes pulse{50%{opacity:.35;transform:scale(.75)}}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.card{border:1px solid var(--line);background:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.035));border-radius:22px;padding:18px;backdrop-filter:blur(20px);box-shadow:0 18px 60px rgba(0,0,0,.18)}.wide{grid-column:1/-1}.label{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.13em;font-weight:800}.value{font-size:22px;font-weight:800;margin-top:8px}.muted{color:var(--dim);font-size:11px;line-height:1.6}.commit{display:flex;gap:12px;padding:12px 0;border-top:1px solid var(--line)}.commit:first-child{border-top:0}.commit-icon{width:32px;height:32px;border-radius:10px;background:var(--redSoft);display:grid;place-items:center;color:var(--red2);flex:0 0 32px}.commit-main{min-width:0}.commit-title{font-size:12px;font-weight:700;line-height:1.45}.commit-meta{margin-top:4px;color:var(--dim);font-size:10px}.status{display:flex;align-items:center;gap:9px}.status-dot{width:9px;height:9px;border-radius:50%;background:#45d483;box-shadow:0 0 14px rgba(69,212,131,.4)}.footer{text-align:center;color:#666;font-size:10px;padding-top:28px}
+@media(max-width:650px){.shell{padding:16px 13px 30px}.hero{padding:55px 0 28px}.grid{grid-template-columns:1fr}.wide{grid-column:auto}.hero h1{font-size:52px}.card{border-radius:18px}}
+</style>
+</head>
+<body>
+<div class="ambient"></div>
+<main class="shell">
+<header class="top"><div class="brand"><span class="mark"></span><span>Redlighte</span></div><a class="back" href="/">Back to Redlighte</a></header>
+<section class="hero"><span class="live"><i class="dot"></i> LIVE NOW</span><div class="eyebrow" style="margin-top:20px">REDLIGHTE NOW</div><h1>What’s happening<br>right now.</h1><p>A live, lightweight view of the Redlighte ecosystem — project activity, service state and the latest public development signals.</p></section>
+<section class="grid">
+<article class="card"><div class="label">Current time</div><div class="value" id="clock">—</div><div class="muted" id="timezone">Loading timezone…</div></article>
+<article class="card"><div class="label">Redlighte status</div><div class="value status"><i class="status-dot"></i><span>Online</span></div><div class="muted">This page is responding and the public Redlighte site is reachable.</div></article>
+<article class="card wide"><div class="label">Latest Redlighte development</div><div id="commits" class="muted" style="padding-top:10px">Loading public activity…</div></article>
+<article class="card"><div class="label">Project</div><div class="value">Redlighte</div><div class="muted">Core repository activity from the public Redlighte project.</div></article>
+<article class="card"><div class="label">Updated</div><div class="value" id="updated">Just now</div><div class="muted">The clock updates locally. Public activity refreshes periodically.</div></article>
+</section>
+<div class="footer">Redlighte Now • Live project signals, without exposing private user data.</div>
+</main>
+<script>
+const clock=document.getElementById('clock'),tz=document.getElementById('timezone'),updated=document.getElementById('updated');
+function tick(){const d=new Date();clock.textContent=d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});tz.textContent=Intl.DateTimeFormat().resolvedOptions().timeZone||'Local time';} tick();setInterval(tick,1000);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function loadCommits(){const box=document.getElementById('commits');try{const r=await fetch('https://api.github.com/repos/amirsepehr2020/redlighte/commits?per_page=5',{headers:{Accept:'application/vnd.github+json'}});if(!r.ok)throw new Error();const data=await r.json();if(!Array.isArray(data)||!data.length){box.textContent='No public activity available yet.';return}box.innerHTML=data.map(c=>{const msg=(c.commit?.message||'').split('\n')[0];const date=c.commit?.author?.date?new Date(c.commit.author.date):null;const ago=date?formatAgo(Date.now()-date.getTime()):'';return `<div class="commit"><div class="commit-icon">✦</div><div class="commit-main"><div class="commit-title">${esc(msg)}</div><div class="commit-meta">${esc(c.commit?.author?.name||'Redlighte')} • ${esc(ago)} • ${esc(String(c.sha||'').slice(0,7))}</div></div></div>`}).join('');updated.textContent='Refreshed just now';}catch{box.innerHTML='<div style="padding:8px 0">Public development activity is temporarily unavailable. Redlighte Now itself is still running.</div>';updated.textContent='Refresh unavailable';}}
+function formatAgo(ms){const s=Math.max(0,Math.floor(ms/1000));if(s<60)return s+'s ago';const m=Math.floor(s/60);if(m<60)return m+'m ago';const h=Math.floor(m/60);if(h<24)return h+'h ago';return Math.floor(h/24)+'d ago'}
+loadCommits();setInterval(loadCommits,60000);
+</script>
+</body></html>

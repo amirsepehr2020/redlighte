@@ -1,6 +1,65 @@
-const grid=document.getElementById('song-grid');const form=document.getElementById('music-search');const input=document.getElementById('search-input');const player=document.getElementById('player');const audio=document.getElementById('audio');const cover=document.getElementById('player-cover');const title=document.getElementById('player-title');const artist=document.getElementById('player-artist');
-function render(items){grid.innerHTML='';if(!items.length){grid.innerHTML='<div class="empty">No music found yet.</div>';return}for(const song of items){const card=document.createElement('article');card.className='song-card';card.innerHTML=`<img loading="lazy" src="${safe(song.cover_url)}" alt=""><div class="song-info"><strong>${safe(song.title)}</strong><span>${safe(song.artist)}</span></div>`;card.addEventListener('click',()=>play(song));grid.appendChild(card)}}
-function play(song){if(!song.audio_url)return;cover.src=song.cover_url||'';title.textContent=song.title||'';artist.textContent=song.artist||'';audio.src=song.audio_url;player.hidden=false;audio.play().catch(()=>{})}
-function safe(v){const d=document.createElement('div');d.textContent=v??'';return d.innerHTML}
-async function load(path='/api/music/latest'){try{const r=await fetch(path,{headers:{Accept:'application/json'}});if(!r.ok)throw new Error('Music API unavailable');const data=await r.json();render(Array.isArray(data.songs)?data.songs:[])}catch(e){render([])}}
-form.addEventListener('submit',async e=>{e.preventDefault();const q=input.value.trim();if(!q)return load();await load('/api/music/search?q='+encodeURIComponent(q))});load();
+const form = document.querySelector('#searchForm');
+const input = document.querySelector('#q');
+const grid = document.querySelector('#grid');
+const status = document.querySelector('#status');
+const player = document.querySelector('#player');
+const audio = document.querySelector('#audio');
+const playerCover = document.querySelector('#playerCover');
+const playerTitle = document.querySelector('#playerTitle');
+const playerArtist = document.querySelector('#playerArtist');
+
+const esc = (v='') => String(v).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+const typeFa = {song:'آهنگ',artist:'خواننده',album:'آلبوم'};
+const API = '/music/api/music';
+
+function render(results){
+  if(!results.length){ grid.innerHTML='<div class="empty">نتیجه‌ای پیدا نشد 😕<br><small>املای دیگری را امتحان کن.</small></div>'; return; }
+  grid.innerHTML = results.map((r,i)=>{
+    const cover = r.coverUrl ? `/music/api/music/cover?url=${encodeURIComponent(r.coverUrl)}` : '';
+    return `<article class="card" data-index="${i}">
+      ${cover ? `<img class="cover" loading="lazy" src="${cover}" onerror="this.style.visibility='hidden'" alt="">` : '<div class="cover"></div>'}
+      <div class="type">${typeFa[r.type] || 'موسیقی'}</div>
+      <h3>${esc(r.title)}</h3>
+      <p>${esc(r.artist || r.album || '')}</p>
+    </article>`;
+  }).join('');
+  grid.querySelectorAll('.card').forEach((el,i)=>el.addEventListener('click',()=>openResult(results[i])));
+}
+
+async function openResult(r){
+  if(r.type==='song' && r.audioUrl){
+    player.classList.remove('hidden');
+    playerTitle.textContent=r.title;
+    playerArtist.textContent=r.artist||'';
+    if(r.coverUrl) playerCover.src=`/music/api/music/cover?url=${encodeURIComponent(r.coverUrl)}`;
+    audio.src=r.audioUrl;
+    await audio.play().catch(()=>{});
+    return;
+  }
+  if(r.type==='song') {
+    player.classList.remove('hidden');
+    playerTitle.textContent='پخش مستقیم در دسترس نیست';
+    playerArtist.textContent='برای این نتیجه منبع صوتی مجاز ثبت نشده است.';
+    audio.removeAttribute('src'); audio.load();
+  }
+}
+
+async function search(q){
+  q=q.trim(); if(q.length<2)return;
+  status.textContent='در حال جستجو…';
+  grid.innerHTML='<div class="empty">داریم می‌گردیم 🔎</div>';
+  try{
+    const res=await fetch(`${API}/search?q=${encodeURIComponent(q)}`);
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.error||'خطا');
+    render(data.results||[]);
+    status.textContent=`${(data.results||[]).length} نتیجه`;
+    location.hash='results';
+  }catch(e){
+    grid.innerHTML='<div class="empty">ارتباط با سرویس موسیقی برقرار نشد. دوباره امتحان کن.</div>';
+    status.textContent='خطا';
+  }
+}
+
+form.addEventListener('submit',e=>{e.preventDefault();search(input.value)});
+document.querySelectorAll('[data-q]').forEach(b=>b.addEventListener('click',()=>{input.value=b.dataset.q;search(b.dataset.q)}));

@@ -24,6 +24,23 @@ async function loadVault(){if(!authState?.user)return false;account.textContent=
 document.getElementById('add').onclick=()=>{if(!state.ready)return;modal.classList.add('show');modal.setAttribute('aria-hidden','false');document.getElementById('title').focus()};document.getElementById('close').onclick=()=>{modal.classList.remove('show');modal.setAttribute('aria-hidden','true')};modal.onclick=e=>{if(e.target===modal)document.getElementById('close').click()};search.oninput=render;
 form.onsubmit=async e=>{e.preventDefault();save.disabled=true;save.textContent='Saving…';try{const r=await api('/api/vault',{method:'POST',body:JSON.stringify({title:document.getElementById('title').value,body:document.getElementById('body').value,type:document.getElementById('type').value})});if(!r.ok)throw new Error('save');const d=await r.json();state.items.unshift(d.item);form.reset();document.getElementById('close').click();render()}catch{alert('Could not save this item. Please try again.')}finally{save.disabled=false;save.textContent='Save to Vault'}};
 grid.onclick=async e=>{const b=e.target.closest('[data-delete]');if(!b)return;if(!confirm('Delete this item from your Vault?'))return;b.disabled=true;try{const r=await api('/api/vault?id='+encodeURIComponent(b.dataset.delete),{method:'DELETE'});if(!r.ok)throw new Error('delete');state.items=state.items.filter(x=>x.id!==b.dataset.delete);render()}catch{b.disabled=false;alert('Could not delete this item. Please try again.')}};
-let attempts=0;const waitForAccount=async()=>{if(authState?.user){await loadVault();return}if(++attempts<120)setTimeout(waitForAccount,250);else grid.innerHTML='<div class="empty">Please sign in with your Redlighte Account to use Vault.</div>'};waitForAccount();
+async function verifyAccount(){
+  grid.innerHTML='<div class="loading">Checking your Redlighte Account…</div>';
+  const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),5000);
+  try{
+    const r=await fetch('/api/auth/me',{credentials:'include',cache:'no-store',signal:controller.signal});
+    clearTimeout(timer);
+    if(r.ok){
+      const d=await r.json().catch(()=>({}));
+      if(d.authenticated&&d.user?.username){authState.user=d.user;await loadVault();return}
+    }
+    grid.innerHTML='<div class="empty">Please sign in with your Redlighte Account to use Vault.</div>';
+    if(typeof authScreen==='function')authScreen('login');
+  }catch(error){
+    clearTimeout(timer);
+    grid.innerHTML='<div class="empty">Redlighte Account could not be checked. Please refresh and try again.</div>';
+  }
+}
+verifyAccount();
 </script>
 </body></html>

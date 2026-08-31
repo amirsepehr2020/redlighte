@@ -25,11 +25,11 @@ async function verifyAccount(){
   grid.innerHTML='<div class="loading">Checking your Redlighte Account…</div>';
   const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),3500);
   try{
-    const r=await fetch('/api/auth/me?source=vault&_='+Date.now(),{credentials:'include',cache:'no-store',signal:controller.signal,headers:{'Accept':'application/json'}});
+    const r=await fetch('/api/account/data?_='+Date.now(),{credentials:'include',cache:'no-store',signal:controller.signal,headers:{'Accept':'application/json'}});
     clearTimeout(timer);
-    if(r.ok){const d=await r.json().catch(()=>({}));if(d.authenticated&&d.user?.username){window.authState={user:d.user,synced:'vault'};await loadVault();return}}
-    grid.innerHTML='<div class="empty">Please sign in with your Redlighte Account to use Vault.</div>';
-    location.href='/account?redirect=%2Fvault%2F';
+    if(r.ok){const d=await r.json().catch(()=>({}));if(d.user?.username){window.authState={user:d.user,synced:'vault'};if(await loadVault())return}}
+    if(r.status===401){location.href='/account?redirect=%2Fvault%2F';return}
+    grid.innerHTML='<div class="empty">Redlighte Account could not be checked. <button class="btn" type="button" onclick="location.href=\'/account?redirect=%2Fvault%2F\'">Sign in</button></div>';
   }catch(error){
     clearTimeout(timer);
     grid.innerHTML='<div class="empty">Redlighte Account could not be checked. <button class="btn" type="button" onclick="location.href=\'/account?redirect=%2Fvault%2F\'">Sign in</button></div>';

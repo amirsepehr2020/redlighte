@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#08090b">
+  <meta name="description" content="Redlighte Game — play, compete and level up with your Redlighte Account.">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/game/game.css">
+  <title>Redlighte Game</title>
+</head>
+<body>
+  <div class="bg-orb orb-a"></div><div class="bg-orb orb-b"></div>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Redlighte home"><span class="brand-mark"><span></span></span><span>Redlighte</span></a>
+    <div class="top-actions">
+      <a class="account-pill" id="accountPill" href="/" title="Redlighte Account"><span class="avatar" id="avatar">?</span><span id="accountName">Redlighte Account</span></a>
+      <a class="glass-button" href="/">Exit</a>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="hero glass-card">
+      <div>
+        <p class="eyebrow">REDLIGHTE GAME</p>
+        <h1>Play. Compete. Level up.</h1>
+        <p class="hero-copy">A gaming space connected to your Redlighte Account — with one profile, one level and one place for your progress.</p>
+      </div>
+      <div class="level-card">
+        <div class="level-top"><span>LEVEL</span><strong id="level">1</strong></div>
+        <div class="progress"><i id="xpBar"></i></div>
+        <small><b id="xp">0</b> XP to next level</small>
+      </div>
+    </section>
+
+    <section class="stats-grid" aria-label="Player stats">
+      <article class="stat glass-card"><span>🎮</span><b id="gamesPlayed">0</b><small>Games Played</small></article>
+      <article class="stat glass-card"><span>🏆</span><b id="wins">0</b><small>Wins</small></article>
+      <article class="stat glass-card"><span>🔥</span><b id="streak">0</b><small>Day Streak</small></article>
+      <article class="stat glass-card"><span>🏅</span><b id="achievements">0</b><small>Achievements</small></article>
+    </section>
+
+    <section class="section-head"><div><p class="eyebrow">ORIGINALS</p><h2>Play now</h2></div><span class="live-dot">● LIVE</span></section>
+    <section class="games-grid" id="gamesGrid">
+      <article class="game-card featured">
+        <div class="game-art redrush-art"><span>⚡</span></div>
+        <div class="game-body"><div class="game-meta"><span>ARCADE</span><span>★ Featured</span></div><h3>Red Rush</h3><p>Tap the red target as fast as you can. Beat your best score.</p><button class="play-button" data-game="redrush">Play Red Rush <b>→</b></button></div>
+      </article>
+      <article class="game-card">
+        <div class="game-art redlight-art"><span>🔴</span></div>
+        <div class="game-body"><div class="game-meta"><span>REACTION</span></div><h3>Redlight</h3><p>Watch the signal. Tap only when the light turns red.</p><button class="play-button" data-game="redlight">Play Redlight <b>→</b></button></div>
+      </article>
+      <article class="game-card">
+        <div class="game-art grid-art"><span>▦</span></div>
+        <div class="game-body"><div class="game-meta"><span>PUZZLE</span></div><h3>Grid</h3><p>Find the glowing tile before the board changes.</p><button class="play-button" data-game="grid">Play Grid <b>→</b></button></div>
+      </article>
+    </section>
+
+    <section class="section-head"><div><p class="eyebrow">PROGRESSION</p><h2>Your achievements</h2></div></section>
+    <section class="achievements-grid glass-card" id="achievementList"></section>
+
+    <section class="section-head"><div><p class="eyebrow">LEADERBOARD</p><h2>Top players</h2></div></section>
+    <section class="leaderboard glass-card">
+      <div class="board-row board-head"><span>#</span><span>Player</span><span>Level</span><span>XP</span></div>
+      <div class="board-row"><span>1</span><span>Redlighte Player</span><span>—</span><span>—</span></div>
+      <div class="board-row you"><span>★</span><span id="boardName">You</span><span id="boardLevel">1</span><span id="boardXp">0</span></div>
+      <p class="board-note">Global competitive rankings can be connected to the Redlighte data API when the server-side Game profile is enabled.</p>
+    </section>
+  </main>
+
+  <div class="modal" id="gameModal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="game-modal glass-card"><button class="close" data-close>×</button><div id="gameMount"></div></div>
+  </div>
+  <div class="toast" id="toast"></div>
+  <script src="/game/game.js"></script>
+</body>
+</html>

@@ -23,15 +23,23 @@ form.onsubmit=async e=>{e.preventDefault();save.disabled=true;save.textContent='
 grid.onclick=async e=>{const b=e.target.closest('[data-delete]');if(!b)return;if(!confirm('Delete this item from your Vault?'))return;b.disabled=true;try{const r=await api('/api/vault?id='+encodeURIComponent(b.dataset.delete),{method:'DELETE'});if(!r.ok)throw new Error('delete');state.items=state.items.filter(x=>x.id!==b.dataset.delete);render()}catch{b.disabled=false;alert('Could not delete this item. Please try again.')}};
 async function verifyAccount(){
   grid.innerHTML='<div class="loading">Checking your Redlighte Account…</div>';
+  // Prefer the already-established Redlighte Account session. The header may already
+  // know the user, so do not reject a valid session merely because the secondary
+  // account-data request is unavailable or slower than the UI.
+  const existingUser=window.authState?.user;
+  if(existingUser?.username){
+    if(await loadVault())return;
+  }
   const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),3500);
   try{
     const r=await fetch('/api/account/data?_='+Date.now(),{credentials:'include',cache:'no-store',signal:controller.signal,headers:{'Accept':'application/json'}});
     clearTimeout(timer);
-    if(r.ok){const d=await r.json().catch(()=>({}));if(d.user?.username){window.authState={user:d.user,synced:'vault'};if(await loadVault())return}}
+    if(r.ok){const d=await r.json().catch(()=>({}));if(d.user?.username){window.authState=window.authState||{};window.authState.user=d.user;if(await loadVault())return}}
     if(r.status===401){location.href='/account?redirect=%2Fvault%2F';return}
     grid.innerHTML='<div class="empty">Redlighte Account could not be checked. <button class="btn" type="button" onclick="location.href=\'/account?redirect=%2Fvault%2F\'">Sign in</button></div>';
   }catch(error){
     clearTimeout(timer);
+    if(window.authState?.user?.username&&await loadVault())return;
     grid.innerHTML='<div class="empty">Redlighte Account could not be checked. <button class="btn" type="button" onclick="location.href=\'/account?redirect=%2Fvault%2F\'">Sign in</button></div>';
   }
 }

@@ -6,55 +6,44 @@ export async function handleVault(request,env,url){
   try{
     const session=await readSession(request,env);
     if(!session)return json({error:'Unauthorized.',code:'AUTH_REQUIRED'},401,cors);
-    const username=session.username;
-    const path=`vault/${username}.json`;
+    const path=`vault/${session.username}.json`;
     const file=await githubFile(env,path);
-    const data=file?JSON.parse(file.content):{items:[]};
-    if(!Array.isArray(data.items))data.items=[];
-    if(request.method==='GET')return json({user:{id:session.id,name:session.name,username:session.username},items:data.items},200,cors);
+    const data=normalize(file);
+    if(request.method==='GET')return json({user:{id:session.id,name:session.name,username:session.username},collections:data.collections,items:data.items,trash:data.trash,stats:{items:data.items.length,favorites:data.items.filter(x=>x.favorite).length,collections:data.collections.length,trash:data.trash.length}},200,cors);
     if(request.method==='POST'){
-      const body=await request.json().catch(()=>null);
-      const title=clean(body?.title,120),bodyText=clean(body?.body,20000),type=clean(body?.type,24).toLowerCase()||'note';
-      if(!title||!bodyText)return json({error:'Title and content are required.'},400,cors);
-      if(!['note','link','code'].includes(type))return json({error:'Invalid item type.'},400,cors);
+      const body=await request.json().catch(()=>null); const action=clean(body?.action,30)||'create';
       const now=new Date().toISOString();
-      const item={id:crypto.randomUUID(),title,body:bodyText,type,createdAt:now,updatedAt:now};
-      data.items.unshift(item);data.items=data.items.slice(0,500);
-      await githubWrite(env,path,data,file?.sha||null,'Update Vault');
-      return json({item},201,cors);
+      if(action==='create'){
+        const title=clean(body?.title,120),content=clean(body?.body,20000),type=clean(body?.type,24).toLowerCase()||'note';
+        if(!title||!content)return json({error:'Title and content are required.'},400,cors);
+        if(!['note','link','code','bookmark','checklist','idea','document'].includes(type))return json({error:'Invalid item type.'},400,cors);
+        const item={id:crypto.randomUUID(),title,body:content,type,tags:tags(body?.tags),collectionId:clean(body?.collectionId,80),favorite:!!body?.favorite,createdAt:now,updatedAt:now,checked: type==='checklist'?!!body?.checked:false};
+        data.items.unshift(item);data.items=data.items.slice(0,500);await githubWrite(env,path,data,file?.sha||null,'Create Vault item');return json({item},201,cors);
+      }
+      if(action==='update'){
+        const id=clean(body?.id,80),item=data.items.find(x=>x.id===id);if(!item)return json({error:'Item not found.'},404,cors);
+        if(body.title!==undefined)item.title=clean(body.title,120);if(body.body!==undefined)item.body=clean(body.body,20000);if(body.type!==undefined)item.type=clean(body.type,24).toLowerCase();if(body.tags!==undefined)item.tags=tags(body.tags);if(body.collectionId!==undefined)item.collectionId=clean(body.collectionId,80);if(body.favorite!==undefined)item.favorite=!!body.favorite;if(body.checked!==undefined)item.checked=!!body.checked;item.updatedAt=now;
+        await githubWrite(env,path,data,file?.sha||null,'Update Vault item');return json({item},200,cors);
+      }
+      if(action==='collection_create'){
+        const name=clean(body?.name,60);if(!name)return json({error:'Collection name is required.'},400,cors);if(data.collections.some(x=>x.name.toLowerCase()===name.toLowerCase()))return json({error:'Collection already exists.'},409,cors);const c={id:crypto.randomUUID(),name,createdAt:now};data.collections.push(c);await githubWrite(env,path,data,file?.sha||null,'Create Vault collection');return json({collection:c},201,cors);
+      }
+      if(action==='collection_delete'){const id=clean(body?.id,80);if(!data.collections.some(x=>x.id===id))return json({error:'Collection not found.'},404,cors);data.collections=data.collections.filter(x=>x.id!==id);data.items.forEach(x=>{if(x.collectionId===id)x.collectionId=''});await githubWrite(env,path,data,file?.sha||null,'Delete Vault collection');return json({ok:true},200,cors)}
+      if(action==='restore'){const id=clean(body?.id,80),idx=data.trash.findIndex(x=>x.id===id);if(idx<0)return json({error:'Item not found in trash.'},404,cors);const item=data.trash.splice(idx,1)[0];item.deletedAt=undefined;item.updatedAt=now;data.items.unshift(item);await githubWrite(env,path,data,file?.sha||null,'Restore Vault item');return json({item},200,cors)}
+      if(action==='permanent_delete'){const id=clean(body?.id,80);data.trash=data.trash.filter(x=>x.id!==id);await githubWrite(env,path,data,file?.sha||null,'Permanently delete Vault item');return json({ok:true},200,cors)}
+      if(action==='empty_trash'){data.trash=[];await githubWrite(env,path,data,file?.sha||null,'Empty Vault trash');return json({ok:true},200,cors)}
+      return json({error:'Unknown action.'},400,cors);
     }
     if(request.method==='DELETE'){
-      const id=clean(url.searchParams.get('id'),80);
-      if(!id)return json({error:'Item id is required.'},400,cors);
-      const next=data.items.filter(item=>item?.id!==id);
-      if(next.length===data.items.length)return json({error:'Item not found.'},404,cors);
-      data.items=next;
-      await githubWrite(env,path,data,file.sha,'Update Vault');
-      return json({ok:true},200,cors);
+      const id=clean(url.searchParams.get('id'),80),idx=data.items.findIndex(x=>x.id===id);if(idx<0)return json({error:'Item not found.'},404,cors);const item=data.items.splice(idx,1)[0];item.deletedAt=new Date().toISOString();data.trash.unshift(item);data.trash=data.trash.slice(0,500);await githubWrite(env,path,data,file?.sha||null,'Move Vault item to trash');return json({ok:true},200,cors);
     }
     return json({error:'Method not allowed.'},405,{...cors,Allow:'GET,POST,DELETE,OPTIONS'});
-  }catch(error){
-    console.error('VAULT_API_ERROR',error);
-    return json({error:'Vault service error.'},500,cors);
-  }
+  }catch(error){console.error('VAULT_API_ERROR',error);return json({error:'Vault service error.'},500,cors)}
 }
 
-async function readSession(request,env){
-  const cookie=request.headers.get('Cookie')||'';
-  const match=cookie.match(/(?:^|;\s*)redlighte_session=([^;]+)/);
-  if(!match)return null;
-  const raw=match[1];
-  const dot=raw.lastIndexOf('.');
-  if(dot<1)return null;
-  const payload=raw.slice(0,dot),sig=raw.slice(dot+1);
-  try{
-    const expected=await sign(payload,env.GITHUB_TOKEN);
-    if(!timingSafeEqual(new TextEncoder().encode(sig),new TextEncoder().encode(expected)))return null;
-    const data=JSON.parse(fromBase64(payload));
-    if(!data?.id||!data?.username||!data?.exp||data.exp<Date.now())return null;
-    return data;
-  }catch{return null}
-}
+function normalize(file){let d={version:2,collections:[],items:[],trash:[]};if(file){try{d={...d,...JSON.parse(file.content)}}catch{}}if(!Array.isArray(d.collections))d.collections=[];if(!Array.isArray(d.items))d.items=[];if(!Array.isArray(d.trash))d.trash=[];d.version=2;d.items=d.items.map(x=>({...x,tags:Array.isArray(x.tags)?x.tags:[],collectionId:x.collectionId||'',favorite:!!x.favorite}));return d}
+function tags(v){const a=Array.isArray(v)?v:v==null?[]:String(v).split(',');return [...new Set(a.map(x=>String(x).trim().replace(/^#/,'').slice(0,30)).filter(Boolean))].slice(0,12)}
+async function readSession(request,env){const cookie=request.headers.get('Cookie')||'',match=cookie.match(/(?:^|;\s*)redlighte_session=([^;]+)/);if(!match)return null;const raw=match[1],dot=raw.lastIndexOf('.');if(dot<1)return null;const payload=raw.slice(0,dot),sig=raw.slice(dot+1);try{const expected=await sign(payload,env.GITHUB_TOKEN);if(!timingSafeEqual(new TextEncoder().encode(sig),new TextEncoder().encode(expected)))return null;const data=JSON.parse(fromBase64(payload));if(!data?.id||!data?.username||!data?.exp||data.exp<Date.now())return null;return data}catch{return null}}
 async function sign(value,secret){const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(secret),{name:'HMAC',hash:'SHA-256'},false,['sign']);const sig=await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(value));return hex(new Uint8Array(sig))}
 function timingSafeEqual(a,b){if(a.length!==b.length)return false;let x=0;for(let i=0;i<a.length;i++)x|=a[i]^b[i];return x===0}
 function fromBase64(value){const binary=atob(value.replace(/\s/g,''));const bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);return new TextDecoder().decode(bytes)}

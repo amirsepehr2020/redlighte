@@ -3,10 +3,23 @@ const DATA_REPO='amirsepehr2020/redlighte-data';
 export async function handleVault(request,env,url){
   const cors=corsHeaders(request);
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers:cors});
-  const me=await fetch(new Request(new URL('/api/account/data',request.url),request));
-  if(!me.ok&&me.status!==401)return json({error:'Authentication service unavailable.'},503,cors);
-  const auth=await me.json().catch(()=>({}));
-  if(me.status===401||!auth.user?.username)return json({error:'Unauthorized.',code:'AUTH_REQUIRED'},401,cors);
+  let auth=null;
+  try{
+    const accountResponse=await fetch(new Request(new URL('/api/account/data',request.url),request));
+    const accountData=await accountResponse.json().catch(()=>({}));
+    if(accountResponse.ok&&accountData.user?.username)auth=accountData;
+    else if(accountResponse.status===401){
+      const authResponse=await fetch(new Request(new URL('/api/auth/me',request.url),request));
+      const authData=await authResponse.json().catch(()=>({}));
+      if(authResponse.ok&&authData.authenticated&&authData.user?.username)auth=authData;
+      else return json({error:'Unauthorized.',code:'AUTH_REQUIRED'},401,cors);
+    }else if(accountResponse.status>=500){
+      const authResponse=await fetch(new Request(new URL('/api/auth/me',request.url),request));
+      const authData=await authResponse.json().catch(()=>({}));
+      if(authResponse.ok&&authData.authenticated&&authData.user?.username)auth=authData;
+      else return json({error:'Authentication service unavailable.',code:'AUTH_UNAVAILABLE'},503,cors);
+    }else return json({error:'Unauthorized.',code:'AUTH_REQUIRED'},401,cors);
+  }catch(error){console.error('VAULT_AUTH_ERROR',error);return json({error:'Authentication service unavailable.',code:'AUTH_UNAVAILABLE'},503,cors)}
   const username=auth.user.username;
   const path=`vault/${username}.json`;
   try{

@@ -3,10 +3,10 @@ const DATA_REPO='amirsepehr2020/redlighte-data';
 export async function handleVault(request,env,url){
   const cors=corsHeaders(request);
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers:cors});
-  const me=await fetch(new Request(new URL('/api/auth/me',request.url),request));
-  if(!me.ok)return json({error:'Authentication service unavailable.'},503,cors);
+  const me=await fetch(new Request(new URL('/api/account/data',request.url),request));
+  if(!me.ok&&me.status!==401)return json({error:'Authentication service unavailable.'},503,cors);
   const auth=await me.json().catch(()=>({}));
-  if(!auth.authenticated||!auth.user?.username)return json({error:'Unauthorized.',code:'AUTH_REQUIRED'},401,cors);
+  if(me.status===401||!auth.user?.username)return json({error:'Unauthorized.',code:'AUTH_REQUIRED'},401,cors);
   const username=auth.user.username;
   const path=`vault/${username}.json`;
   try{

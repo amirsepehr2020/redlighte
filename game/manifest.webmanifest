@@ -8,6 +8,6 @@
   "background_color": "#08090b",
   "theme_color": "#08090b",
   "icons": [
-    {"src":"/assets/favicon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+    {"src":"/game/redlighte-game-icon.svg","sizes":"512x512","type":"image/svg+xml","purpose":"any maskable"}
   ]
 }

@@ -1,0 +1,16 @@
+{
+  "name": "Redlighte Articles",
+  "short_name": "Articles",
+  "description": "مقالات Redlighte درباره هوش مصنوعی، تکنولوژی و آموزش.",
+  "lang": "fa-IR",
+  "dir": "rtl",
+  "start_url": "/articles/",
+  "scope": "/articles/",
+  "display": "standalone",
+  "background_color": "#080808",
+  "theme_color": "#ff2b3d",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/articles/articles-icon.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

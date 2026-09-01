@@ -1,0 +1,13 @@
+{
+  "name": "Redlighte Game",
+  "short_name": "Redlighte Game",
+  "description": "Play, compete and level up with your Redlighte Account.",
+  "start_url": "/game/",
+  "scope": "/game/",
+  "display": "standalone",
+  "background_color": "#08090b",
+  "theme_color": "#08090b",
+  "icons": [
+    {"src":"/assets/favicon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}

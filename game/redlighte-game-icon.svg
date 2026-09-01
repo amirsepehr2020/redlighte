@@ -1,14 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
   <title id="title">Redlighte Game</title>
-  <desc id="desc">Redlighte Game icon based directly on the Redlighte concentric-circle brand mark, with a subtle game controller detail.</desc>
+  <desc id="desc">Redlighte Game controller icon built from the original Redlighte logo language, with two solid black circles on both sides.</desc>
   <rect width="512" height="512" rx="112" fill="#080808"/>
-  <circle cx="256" cy="256" r="154" fill="#ff3045"/>
-  <circle cx="256" cy="256" r="90" fill="#080808"/>
-  <circle cx="256" cy="256" r="34" fill="#ff3045"/>
-  <g fill="none" stroke="#080808" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M188 242c-16 0-28 12-28 28v18c0 17 22 24 32 10l15-21h98l15 21c10 14 32 7 32-10v-18c0-16-12-28-28-28h-20l-10 14h-76l-10-14h-20Z"/>
-    <path d="M202 264h22M213 253v22"/>
-    <circle cx="304" cy="258" r="5" fill="#080808"/>
-    <circle cx="322" cy="272" r="5" fill="#080808"/>
-  </g>
+  <circle cx="256" cy="256" r="164" fill="#ff3045"/>
+  <path d="M154 238c0-42 34-76 76-76h52c42 0 76 34 76 76v54c0 31-25 56-56 56h-18c-18 0-34-8-45-22l-17-22-17 22c-11 14-27 22-45 22h-18c-31 0-56-25-56-56v-54Z" fill="#080808"/>
+  <circle cx="154" cy="265" r="31" fill="#080808"/>
+  <circle cx="358" cy="265" r="31" fill="#080808"/>
+  <circle cx="256" cy="256" r="62" fill="#ff3045"/>
+  <circle cx="256" cy="256" r="27" fill="#080808"/>
+  <path d="M130 254v22M119 265h22" stroke="#ff3045" stroke-width="9" stroke-linecap="round"/>
+  <circle cx="385" cy="253" r="8" fill="#ff3045"/>
+  <circle cx="401" cy="269" r="8" fill="#ff3045"/>
 </svg>

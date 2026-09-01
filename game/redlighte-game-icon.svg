@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Redlighte Game</title>
+  <desc id="desc">Redlighte Game icon with a stylized R game controller mark.</desc>
+  <defs>
+    <linearGradient id="bg" x1="64" y1="40" x2="448" y2="472" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ff4b5f"/>
+      <stop offset="0.52" stop-color="#e51d38"/>
+      <stop offset="1" stop-color="#8e071c"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="116" y1="76" x2="396" y2="432" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffffff" stop-opacity="0.22"/>
+      <stop offset="0.5" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.16"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="20" stdDeviation="20" flood-color="#ff3045" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="116" fill="#090a0d"/>
+  <rect x="48" y="48" width="416" height="416" rx="104" fill="url(#bg)" filter="url(#shadow)"/>
+  <rect x="48" y="48" width="416" height="416" rx="104" fill="url(#shine)"/>
+  <path d="M141 269c4-47 30-80 72-80h86c42 0 68 33 72 80l10 91c4 37-39 50-58 19l-30-48H219l-30 48c-19 31-62 18-58-19l10-91Z" fill="#fff" fill-opacity="0.96"/>
+  <path d="M177 255v52M151 281h52" stroke="#d71936" stroke-width="18" stroke-linecap="round"/>
+  <circle cx="337" cy="273" r="13" fill="#d71936"/>
+  <circle cx="373" cy="305" r="13" fill="#d71936"/>
+  <path d="M252 219h18c7 0 12 6 12 13v22h-42v-22c0-7 5-13 12-13Z" fill="#d71936"/>
+  <path d="M256 206c0-18 12-32 28-32s28 14 28 32" fill="none" stroke="#fff" stroke-opacity="0.96" stroke-width="10" stroke-linecap="round"/>
+  <path d="M94 112c50-43 112-63 181-63" fill="none" stroke="#fff" stroke-opacity="0.12" stroke-width="14" stroke-linecap="round"/>
+</svg>

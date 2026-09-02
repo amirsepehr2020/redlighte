@@ -1,11 +1,12 @@
 {
   "contentLanguage": "fa-IR",
   "direction": "rtl",
-  "version": 2,
+  "version": 3,
   "categories": [
     {"slug":"ai","name":"هوش مصنوعی","description":"آموزش‌ها، راهنماها و مطالب کاربردی درباره هوش مصنوعی."},
     {"slug":"technology","name":"تکنولوژی","description":"راهنماها و مطالب کاربردی درباره فناوری و ابزارهای دیجیتال."},
     {"slug":"tutorials","name":"آموزش‌ها","description":"آموزش‌های قدم‌به‌قدم برای استفاده بهتر از فناوری و هوش مصنوعی."},
-    {"slug":"redlighte","name":"ردلایت","description":"راهنماها، قابلیت‌ها، اخبار و ایده‌های مرتبط با Redlighte."}
+    {"slug":"redlighte","name":"ردلایت","description":"راهنماها، قابلیت‌ها، اخبار و ایده‌های مرتبط با Redlighte."},
+    {"slug":"game","name":"گیمینگ","description":"اخبار داغ بازی‌ها، کنسول‌ها، PC Gaming و صنعت بازی‌های ویدیویی."}
   ]
 }

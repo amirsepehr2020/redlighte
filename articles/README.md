@@ -11,6 +11,8 @@ SEO-first editorial section for Redlighte.
 5. Add the final URL to the root `sitemap.xml`.
 6. Use internal links to relevant Redlighte pages and related articles.
 7. Never add drafts to the sitemap.
+8. Article detail pages automatically receive the Redlighte engagement bar (Like, Comment, Share) through the Cloudflare Worker. Do not copy the engagement UI into individual articles.
+9. Keep article detail URLs in the form `/articles/<slug>/`; the engagement runtime uses this route pattern to attach the shared UI and preserve the same behavior for future articles.
 
 ## Content rules
 

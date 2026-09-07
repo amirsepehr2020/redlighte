@@ -22,4 +22,11 @@
     WebkitBackdropFilter: 'blur(6px)',
   });
   document.body.appendChild(badge);
+
+  if (/^\/articles\/[^/]+\/?$/.test(location.pathname) && document.querySelector('article h1') && !document.querySelector('script[src^="/articles/engagement.js"]')) {
+    const script = document.createElement('script');
+    script.src = '/articles/engagement.js?v=20260907';
+    script.defer = true;
+    document.body.appendChild(script);
+  }
 })();

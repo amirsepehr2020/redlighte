@@ -1,5 +1,3 @@
-import core from './index-core.js';
-
 const DATA_REPO='amirsepehr2020/redlighte-data';
 const MAX_COMMENT_LENGTH=1000;
 
@@ -15,12 +13,12 @@ export async function handleArticleEngagement(request,env,url){
     data.likes=Array.isArray(data.likes)?data.likes:[];
     data.comments=Array.isArray(data.comments)?data.comments:[];
     if(request.method==='GET'){
-      const session=await getSession(request,env);
+      const session=await readSession(request,env);
       const liked=!!session&&data.likes.includes(session.username);
       return json({likes:data.likes.length,liked,comments:data.comments.slice(-100)},200,cors);
     }
     if(request.method!=='POST')return json({error:'Method not allowed.'},405,{...cors,Allow:'GET,POST,OPTIONS'});
-    const session=await getSession(request,env);
+    const session=await readSession(request,env);
     if(!session)return json({error:'Unauthorized.'},401,cors);
     const body=await request.json().catch(()=>({}));
     const action=body?.action;
@@ -44,8 +42,24 @@ export async function handleArticleEngagement(request,env,url){
   }catch(error){console.error('ARTICLE_ENGAGEMENT_ERROR',error);return json({error:'Article engagement service is temporarily unavailable.'},500,cors)}
 }
 
-async function getSession(request,env){
-  try{const response=await core.fetch(new Request(new URL('/api/auth/me',request.url),{method:'GET',headers:{Cookie:request.headers.get('Cookie')||''}}),env);if(!response.ok)return null;const data=await response.json();return data?.authenticated?data.user:null}catch{return null}}
+async function readSession(request,env){
+  const raw=readCookie(request,'redlighte_session');
+  if(!raw)return null;
+  const dot=raw.lastIndexOf('.');
+  if(dot<1)return null;
+  const payload=raw.slice(0,dot),sig=raw.slice(dot+1);
+  try{
+    const expected=await sign(payload,env.GITHUB_TOKEN);
+    if(!timingSafeEqual(sig,expected))return null;
+    const data=JSON.parse(fromBase64(payload));
+    return data?.exp&&data.exp>Date.now()?data:null;
+  }catch{return null}
+}
+async function sign(value,secret){const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(secret),{name:'HMAC',hash:'SHA-256'},false,['sign']);const sig=await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(value));return hex(new Uint8Array(sig))}
+function timingSafeEqual(a,b){if(a.length!==b.length)return false;let x=0;for(let i=0;i<a.length;i++)x|=a.charCodeAt(i)^b.charCodeAt(i);return x===0}
+function readCookie(request,name){const cookies=request.headers.get('Cookie')||'';const match=cookies.match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`));return match?match[1]:''}
+function fromBase64(value){const binary=atob(value.replace(/\\s/g,''));const bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);return new TextDecoder().decode(bytes)}
+function hex(bytes){return[...bytes].map(x=>x.toString(16).padStart(2,'0')).join('')}
 function cleanSlug(value){return String(value||'').toLowerCase().replace(/[^a-z0-9-]/g,'').slice(0,120)}
 async function githubFile(env,path){const r=await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/${path}?ref=main`,{headers:githubHeaders(env)});if(r.status===404)return null;if(!r.ok)throw new Error(`GitHub GET ${r.status}`);const x=await r.json();const bytes=Uint8Array.from(atob(x.content.replace(/\n/g,'')),c=>c.charCodeAt(0));return{sha:x.sha,content:new TextDecoder().decode(bytes)}}
 async function githubWrite(env,path,data,sha,message){const content=toBase64(JSON.stringify(data,null,2));const r=await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/${path}`,{method:'PUT',headers:{...githubHeaders(env),'Content-Type':'application/json'},body:JSON.stringify({message,content,branch:'main',...(sha?{sha}:{})})});if(!r.ok)throw new Error(`GitHub PUT ${r.status}: ${await r.text()}`)}
